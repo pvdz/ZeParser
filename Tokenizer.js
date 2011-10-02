@@ -463,7 +463,6 @@ Tokenizer.prototype = {
 			
 			
 		} while (stack && returnValue && returnValue.isWhite); // WHITE_SPACE LINETERMINATOR COMMENT_SINGLE COMMENT_MULTI
-		
 		++this.tokenCountNoWhite;
 		
 		this.pos = pos;
