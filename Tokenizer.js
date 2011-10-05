@@ -537,6 +537,11 @@ Tokenizer.prototype = {
 		var stack = [];
 		while ((last = this.storeCurrentAndFetchNextToken(!arrx[n++], false, false, true)) && last.name != 12/*EOF*/) stack.push(last);
 		return stack;
+	},
+	fixValues: function(){
+		this.wtree.forEach(function(t){
+			if (!t.value) t.value = this.inp.substring(t.start, t.stop);
+		},this);
 	}
 };
 
