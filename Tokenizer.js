@@ -1,3 +1,8 @@
+if (typeof exports !== 'undefined') {
+	var window = {Unicode: require('./unicodecategories').Unicode};
+	exports.Tokenizer = Tokenizer;
+}
+
 /*!
  * Tokenizer for JavaScript / ECMAScript 5
  * (c) Peter van der Zee, qfox.nl
@@ -6,7 +11,7 @@
 /**
  * @param {Object} inp
  */
-window.Tokenizer = function(inp){
+function Tokenizer(inp){
 	this.inp = inp||'';
 	// replace all other line terminators with \n (leave \r\n in tact though). we should probably remove the shadowInp when finished...
 	// only replace \r if it is not followed by a \n else \r\n would become \n\n causing a double newline where it is just a single
