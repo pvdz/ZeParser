@@ -45,6 +45,12 @@ function ZeParser(inp, tok, stack, simple){
 
 	this.ast = !simple; ///#define FULL_AST
 };
+/**
+ * Returns just a stacked parse tree (regular array)
+ * @param {string} input
+ * @param {boolean} simple=false
+ * @return {Array}
+ */
 ZeParser.parse = function(input, simple){
 	var tok = new Tokenizer(input);
 	var stack = [];
@@ -53,6 +59,23 @@ ZeParser.parse = function(input, simple){
 		if (simple) parser.ast = false;
 		parser.parse();
 		return stack;
+	} catch (e) {
+		console.log("Parser has a bug for this input, please report it :)", e);
+		return null;
+	}
+};
+/**
+ * Returns a new parser instance with parse details for input
+ * @param {string} input
+ * @returns {ZeParser}
+ */
+ZeParser.createParser = function(input){
+	var tok = new Tokenizer(input);
+	var stack = [];
+	try {
+		var parser = new ZeParser(input, tok, stack);
+		parser.parse();
+		return parser;
 	} catch (e) {
 		console.log("Parser has a bug for this input, please report it :)", e);
 		return null;
