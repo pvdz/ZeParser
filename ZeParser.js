@@ -598,7 +598,7 @@ ZeParser.prototype = {
 							this.failignore('LabelsMayOnlyBeIdentifiers', match, stack);
 						}
 
-						mayParseLabeledStatementInstead[0] = true; // mark label parsed (TOFIX:speed?)
+						mayParseLabeledStatementInstead = true; // mark label parsed (TOFIX:speed?)
 						match = this.tokenizer.storeCurrentAndFetchNextToken(false, match, stack);
 
 						possibleLabel.isLabel = true;
