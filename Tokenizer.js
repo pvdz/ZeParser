@@ -580,25 +580,20 @@ Tokenizer.testSuite = function(arr){
 	var fail = 0;
 	for (var i=0; i<arr.length; ++i) {
 		var test = arr[i], result;
-		switch (test.length) {
-			case 3:
-				result = new Tokenizer(test[0]).tokens();
-				break;
-			case 4:
-				result = new Tokenizer(test[0]).tokens(test[2]);
-				break;
-			default:
-				throw new Error("Unrecognized test case format.");
-		}
-		var desc = test[test.length - 1];
-		if (result.length == test[1]) {
+		var input = test[1];
+		var outputLen = test[2];
+		var regexHints = test[4] ? test[3] : null; // if flags, then len=4
+		var desc = test[4] || test[3];
+		
+		var result = new Tokenizer(input).tokens(regexHints); // regexHints can be null, that's ok
+		if (result.length == outputLen) {
 			debug('<span class="green">Test '+i+' ok:</span>',desc);
 			++ok;
 		} else {
-			debug('<b class="red">Test failed:</span>',desc,'(found',result.length,'expected',test[1]+')'),console.log(desc, result);
+			debug('<b class="red">Test failed:</span>',desc,'(found',result.length,'expected',outputLen+')'),console.log(desc, result);
 			++fail;
 		}
-		debug('<b>'+Tokenizer.escape(test[0])+'</b>');
+		debug('<b>'+Tokenizer.escape(input)+'</b>');
 		debug('<br/>');
 	}
 	debug("Tokenizer test suite finished ("+(+new Date - start)+' ms). ok:'+ok+', fail:'+fail);
