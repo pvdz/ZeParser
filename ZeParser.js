@@ -1,5 +1,5 @@
 if (typeof exports !== 'undefined') {
-	var Tokenizer = require('./tokenizer').Tokenizer;
+	var Tokenizer = require('./Tokenizer').Tokenizer;
 	exports.ZeParser = ZeParser;
 }
 
