@@ -2,7 +2,7 @@
   "author": "Peter van der Zee (http://qfox.nl/)",
   "name": "zeparser",
   "description": "My JavaScript parser",
-  "version": "0.0.1",
+  "version": "0.0.3",
   "homepage": "https://github.com/qfox/ZeParser/",
   "repository": {
     "type": "git",
