@@ -1982,18 +1982,14 @@ ZeParser.prototype = {
 			match = this.eatSemiColon(match, stack);
 		} else if (!isOptional) {
 			if (this.ast) { //#ifdef FULL_AST
+				// unmark token as being start of a statement, since it's obviously not
 				match.statementStart = false;
 			} //#endif
 			match = this.failsafe('UnableToParseStatement', match);
+		} else {
+			// unmark token as being start of a statement, since it's obviously not
+			if (this.ast) match.statementStart = true;
 		}
-//		 else {
-//			// else this call to eatStatement is part of the loop in eatStatements ... should we check for that?
-//			if (match.value == ')') this.failsafe('UnableToParseStatement', match);
-//			else if (match.name != 12/*eof*/ && match.name != 14/*error*/) {
-//				debugger;
-//				throw 'failure';
-//			}
-//		}
 
 		if (this.ast) { //#ifdef FULL_AST
 			if (!stack.length) pstack.length = pstack.length-1;
