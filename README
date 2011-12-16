@@ -3,7 +3,11 @@ http://github.com/qfox/ZeParser
 (c) Peter van der Zee
 http://qfox.nl
 
-Tokenizer is used by the parser. The parser tells the tokenizer whether the next token may be a regular expression or not. Without the parser, the tokenizer will fail if regular expression literals are used in the input.
+
+Benchmark
+http://qfox.github.com/ZeParser/benchmark.html
+
+The Tokenizer is used by the parser. The parser tells the tokenizer whether the next token may be a regular expression or not. Without the parser, the tokenizer will fail if regular expression literals are used in the input.
 
 Usage:
 ZeParser.parse(input);
@@ -31,4 +35,3 @@ var tree = []; // this should probably be refactored away some day
 var tokenizer = new Tokenizer(input); // dito
 var parser = new ZeParser(input, tokenizer, tree);
 parser.parse(); // returns tree..., should never throw errors
-

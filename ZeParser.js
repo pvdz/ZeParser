@@ -1,5 +1,5 @@
 if (typeof exports !== 'undefined') {
-	var Tokenizer = require('./tokenizer').Tokenizer;
+	var Tokenizer = require('./Tokenizer').Tokenizer;
 	exports.ZeParser = ZeParser;
 }
 
@@ -1642,12 +1642,13 @@ ZeParser.prototype = {
 		match = this.tokenizer.storeCurrentAndFetchNextToken(false, match, stack);
 		if (match.value != '}') match = this.eatStatements(match, stack);
 		if (match.value != '}') match = this.failsafe('MissingTryBlockCurlyClose', match);
-		match = this.tokenizer.storeCurrentAndFetchNextToken(false, match, stack);
 
 		if (this.ast) { //#ifdef FULL_AST
 			match.twin = lhc;
 			lhc.twin = match;
 		} //#endif
+		
+		match = this.tokenizer.storeCurrentAndFetchNextToken(false, match, stack);
 
 		return match;
 	},
