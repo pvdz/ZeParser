@@ -1475,6 +1475,7 @@ ZeParser.prototype = {
 
 		while (match.value == 'case' || (!stack.parsedSwitchDefault && match.value == 'default')) {
 			parsedAnything = true;
+			if (match.value == 'default') stack.parsedSwitchDefault = true;
 
 			match = this.eatSwitchClause(match, stack);
 		}
