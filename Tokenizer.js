@@ -581,7 +581,7 @@ Tokenizer.testSuite = function(arr){
 	for (var i=0; i<arr.length; ++i) {
 		var test = arr[i], result;
 		var input = test[0];
-		var outputLen = test[1];
+		var outputLen = test[1].length ? test[1][0] : test[1];
 		var regexHints = test[3] ? test[2] : null; // if flags, then len=4
 		var desc = test[3] || test[2];
 		

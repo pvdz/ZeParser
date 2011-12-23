@@ -2054,10 +2054,14 @@ ZeParser.testSuite = function(tests){
 	var fail = 0;
 	var start = +new Date;
 	for (var i = 0; i < tests.length; ++i) {
-		var test = tests[i], input = test[0], desc = test[test.length - 1], stack = [];
+		var test = tests[i], input = test[0], outputLen = test[1].length ? test[1][1] : test[1], desc = test[test.length - 1], stack = [];
 		try {
-			new ZeParser(input, new Tokenizer(input), stack).parse();
-			++ok;
+			var result = ZeParser.parse(input, true);
+			if (result.length == outputLen) {
+				++ok;
+			} else {
+				++fail;
+			}
 		} catch (e) {
 			++fail;
 		}

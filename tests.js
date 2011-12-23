@@ -1,5 +1,5 @@
 // tests for both the tokenizer and parser. Parser test results could be checked tighter.
-// api: [input, token-output-count, ?regex-hints, desc]
+// api: [input, ?[token-output-count, parser-output-count], ?regex-hints, desc]
 // regex-hints are for tokenizer, will tell for each token whether it might parse regex or not (parser's job)
 var Tests = [
 
@@ -13,37 +13,37 @@ var Tests = [
 ["var varwithfunction;", 4, "Variable Declaration, Identifier Containing Reserved Words, `;`"],
 ["a + b;", 6, "Addition/Concatenation"],
 
-["'a'", 1, "Single-Quoted String"],
+["'a'", [1, 2], "Single-Quoted String"],
 ["'a';", 2, "Single-Quoted String, `;`"], // Taken from the parser test suite.
 
-["'a\\n'", 1, "Single-Quoted String With Escaped Linefeed"],
+["'a\\n'", [1, 2], "Single-Quoted String With Escaped Linefeed"],
 ["'a\\n';", 2, "Single-Quoted String With Escaped Linefeed, `;`"], // Taken from the parser test suite.
 
-["\"a\"", 1, "Double-Quoted String"],
+["\"a\"", [1, 2], "Double-Quoted String"],
 ["\"a\";", 2, "Double-Quoted String, `;`"], // Taken from the parser test suite.
 
-["\"a\\n\"", 1, "Double-Quoted String With Escaped Linefeed"],
+["\"a\\n\"", [1, 2], "Double-Quoted String With Escaped Linefeed"],
 ["\"a\\n\";", 2, "Double-Quoted String With Escaped Linefeed, `;`"], // Taken from the parser test suite.
 
-["500", 1, "Integer"],
+["500", [1, 2], "Integer"],
 ["500;", 2, "Integer, `;`"], // Taken from the parser test suite.
 
-["500.", 1, "Double With Trailing Decimal Point"],
+["500.", [1, 2], "Double With Trailing Decimal Point"],
 ["500.;", 2, "Double With Trailing Decimal Point"], // Taken from the parser test suite.
 
-["500.432", 1, "Double With Decimal Component"],
+["500.432", [1, 2], "Double With Decimal Component"],
 ["500.432;", 2, "Double With Decimal Component, `;`"], // Taken from the parser test suite.
 
-[".432432", 1, "Number, 0 < Double < 1"],
+[".432432", [1, 2], "Number, 0 < Double < 1"],
 [".432432;", 2, "Number, 0 < Double < 1, `;`"], // Taken from the parser test suite.
 
-["(a,b,c)", 7, "Parentheses, Comma-separated identifiers"],
+["(a,b,c)", [7, 8], "Parentheses, Comma-separated identifiers"],
 ["(a,b,c);", 8, "Parentheses, Comma-separated identifiers, `;`"], // Taken from the parser test suite.
 
-["[1,2,abc]", 7, "Array literal"],
+["[1,2,abc]", [7, 8], "Array literal"],
 ["[1,2,abc];", 8, "Array literal, `;`"], // Taken from the parser test suite.
 
-["{a:1,\"b\":2,c:c}", 13, "Object literal"],
+["{a:1,\"b\":2,c:c}", [13, 19], "Malformed Block"],
 ["var o = {a:1,\"b\":2,c:c};", 20, "Assignment, Object Literal, `;`"], // Taken from the parser test suite.
 
 ["var x;\nvar y;", 9, "2 Variable Declarations, Multiple lines"],
@@ -56,7 +56,7 @@ var Tests = [
 ["/a/b;", 2, [true, true], "RegExp Literal, Flags, `;`"],
 ["++x;", 3, "Unary Increment, Prefix, `;`"],
 [" / /;", 3, [true, true, false], "RegExp, Leading Whitespace, `;`"],
-["/ / / / /", 5, [true, false, false, false, true], "RegExp Containing One Space, Space, Division, Space, RegExp Containing One Space"],
+["/ / / / /", [5, 6], [true, false, false, false, true], "RegExp Containing One Space, Space, Division, Space, RegExp Containing One Space"],
 
 // Taken from the parser test suite.
 
@@ -77,13 +77,19 @@ var Tests = [
 ["+function(){/regex/;};", 9, [false, false, false, false, false, true, false, false, false], "Unary `+` Operator, Function Expression Containing RegExp and Semicolon, `;`"],
 
 // Line Terminators.
+
 ["\r\n", 1, "CRLF Line Ending = 1 Linefeed"],
 ["\r", 1, "CR Line Ending = 1 Linefeed"],
 ["\n", 1, "LF Line Ending = 1 Linefeed"],
 ["\r\n\n\u2028\u2029\r", 5, "Various Line Terminators"],
 
 // Whitespace.
-["a \t\u000b\u000c\u00a0\uFFFFb", 8, "Whitespace"],
+["a \t\u000b\u000c\u00a0\uffffb", [8, 10], "Whitespace"],
+// Additional tests for whitespace...
+
+// http://code.google.com/p/es-lab/source/browse/trunk/tests/parser/parsertests.js?r=86 and 430.
+
+// first tests for the lexer, should also parse as program (when you append a semi)
 
 // Comments.
 ["//foo!@#^&$1234\nbar;", 4, "Line Comment, Linefeed, Identifier, `;`"],
@@ -149,9 +155,9 @@ var Tests = [
 ["\"\\x55\";", 2, "Double-Quoted String Containing Hex Escape Sequence, `;`"],
 ["\"\\x55a\";", 2, "Double-Quoted String Containing Hex Escape Sequence and Additional Character, `;`"],
 ["\"a\\\\nb\";", 2, "Double-Quoted String Containing Escaped Linefeed, `;`"],
-["\";\"", 1, "Double-Quoted String Containing `;`"],
+["\";\"", [1, 2], "Double-Quoted String Containing `;`"],
 ["\"a\\\nb\";", 2, "Double-Quoted String Containing Reverse Solidus and Linefeed, `;`"],
-["'\\\\'+ ''", 4, "Single-Quoted String Containing Reverse Solidus, `+`, Empty Single-Quoted String"],
+["'\\\\'+ ''", [4, 5], "Single-Quoted String Containing Reverse Solidus, `+`, Empty Single-Quoted String"],
 
 // `null`, `true`, and `false`.
 ["null;", 2, "`null`, `;`"],
@@ -164,11 +170,15 @@ var Tests = [
 ["/abc[a-z]*def/g;", 2, [true, true], "RegExp Containing Character Range and Quantifier, `;`"],
 ["/\\b/;", 2, [true, true], "RegExp Containing Control Character, `;`"],
 ["/[a-zA-Z]/;", 2, [true, true], "RegExp Containing Extended Character Range, `;`"],
+
+// Additional Program Tests.
+
+// RegExps.
 ["/foo(.*)/g;", 2, [true, false], "RegExp Containing Capturing Group and Quantifier, `;`"],
 
 // Array Literals.
 ["[];", 3, "Empty Array, `;`"],
-["[\b\n\f\r\t\x20];", 9, "Array Containing Whitespace, `;`"],
+["[\b\n\f\r\t\u0020];", [9, 10], "Array Containing Whitespace, `;`"],
 ["[1];", 4, "Array Containing 1 Element, `;`"],
 ["[1,2];", 6, "Array Containing 2 Elements, `;`"],
 ["[1,2,,];", 8, "Array Containing 2 Elisions, `;`"],
@@ -237,7 +247,7 @@ var Tests = [
 // Comma Operator.
 ["x, y;", 5, "Comma Operator"],
 
-// Miscellaneous.
+// ...
 ["new Date++;", 5, "`new` Operator, Identifier, Postfix Increment, `;`"],
 ["+x++;", 4, "Unary `+`, Identifier, Postfix Increment, `;`"],
 
@@ -360,7 +370,7 @@ var Tests = [
 // `throw` Statement.
 ["throw x;", 4, "Throw Statement, `;`"],
 ["throw x\n;", 5, "Throw Statement, Linefeed, `;`"],
-["throw x", 3, "Throw Statement, No `;` (Safari 2 Case)"],
+["throw x", [3, 4], "Throw Statement, No `;` (Safari 2 Case)"],
 
 // `try...catch...finally` Statement.
 ["try { s1; } catch (e) { s2; };", 22, "`try...catch` Statement"],
@@ -380,7 +390,7 @@ var Tests = [
 ["(function (x) {; });", 13, "Parenthesized Empty Function Expression"],
 ["(function f(x) { return x; });", 18, "Named Function Expression"],
 
-// ECMAScript Programs.
+// ECMAScript Program.
 ["var x; function f(){;}; null;", 17, "Variable Declaration, Function Declaration, `null`, `;`"],
 [";;", 2, "Program: 2 Empty Statements"],
 ["{ x; y; z; }", 12, "Program: Block Comprising Semicolon-Delimited Identifiers"],
@@ -388,16 +398,16 @@ var Tests = [
 ["x;\n/*foo*/\n\t;", 7, "Program: Identifier, Linefeed, Block Comment, Linefeed"],
 
 // Automatic Semicolon Insertion
-["continue \n foo;", 6, "Restricted Production: `continue` Statement"],
-["break \n foo;", 6, "Restricted Production: `break` Statement"],
-["return\nfoo;", 4, "Restricted Production: `return` Statement"],
-["throw\nfoo;", 4, "Restricted Production: `throw` Statement"],
-["var x; { 1 \n 2 } 3", 16, "Classic Automatic Semicolon Insertion Case"],
-["ab \t /* hi */\ncd", 7, "Automatic Semicolon Insertion: Block Comment"],
-["ab/*\n*/cd", 3, "Automatic Semicolon Insertion Triggered by Multi-Line Block Comment"],
-["continue /* wtf \n busta */ foo;", 6, "Automatic Semicolon Insertion: `continue` Statement Preceding Multi-Line Block Comment"],
-["function f() { s }", 11, "Automatic Semicolon Insertion: Statement Within Function Declaration"],
-["function f() { return }", 11, "Automatic Semicolon Insertion: `return` Statement Within Function Declaration"],
+["continue \n foo;", [6, 7], "Restricted Production: `continue` Statement"],
+["break \n foo;", [6, 7], "Restricted Production: `break` Statement"],
+["return\nfoo;", [4, 5], "Restricted Production: `return` Statement"],
+["throw\nfoo;", [4, 6], "Restricted Production: `throw` Statement"],
+["var x; { 1 \n 2 } 3", [16, 19], "Classic Automatic Semicolon Insertion Case"],
+["ab \t /* hi */\ncd", [7, 9], "Automatic Semicolon Insertion: Block Comment"],
+["ab/*\n*/cd", [3, 5], "Automatic Semicolon Insertion Triggered by Multi-Line Block Comment"],
+["continue /* wtf \n busta */ foo;", [6, 7], "Automatic Semicolon Insertion: `continue` Statement Preceding Multi-Line Block Comment"],
+["function f() { s }", [11, 12], "Automatic Semicolon Insertion: Statement Within Function Declaration"],
+["function f() { return }", [11, 12], "Automatic Semicolon Insertion: `return` Statement Within Function Declaration"],
 
 // Strict Mode.
 ["\"use strict\"; 'bla'\n; foo;", 9, "Double-Quoted Strict Mode Directive, Program"],
@@ -406,12 +416,13 @@ var Tests = [
 ["\"use\\n strict\";", 2, "Invalid Strict Mode Directive Containing Linefeed"],
 ["foo; \"use strict\";", 5, "Invalid Strict Mode Directive Within Program"],
 
-// Taken from http://es5conform.codeplex.com.
+// Tests from http://es5conform.codeplex.com.
+
 ["\"use strict\"; var o = { eval: 42};", 17, "Section 8.7.2: `eval` object property name is permitted in strict mode"],
 ["({foo:0,foo:1});", 12, "Duplicate object property name is permitted in non-strict mode"],
 ["function foo(a,a){}", 10, "Duplicate argument name is permitted in non-strict mode"],
-["(function foo(eval){})", 10, "`eval` argument name is permitted in non-strict mode"],
-["(function foo(arguments){})", 10, "`arguments` argument name is permitted in non-strict mode"],
+["(function foo(eval){})", [10, 11], "`eval` argument name is permitted in non-strict mode"],
+["(function foo(arguments){})", [10, 11], "`arguments` argument name is permitted in non-strict mode"],
 
 // Empty Programs.
 ["", 0, "Empty Program"],
@@ -426,21 +437,21 @@ var Tests = [
 ["  /*\nsmeh*/\t\n   ", 8, "Spaces, Block Comment, Linefeeds, and Tabs"],
 
 // Trailing Whitespace.
-["a  ", 3, "Trailing Space Characters"],
-["a /* something */", 3, "Trailing Block Comment"],
-["a\n\t// hah", 4, "Trailing Linefeed, Tab, and Line Comment"],
-["/abc/de//f", 2, [true, true], "RegExp With Flags, Trailing Line Comment"],
-["/abc/de/*f*/\n\t", 4, [true, true, true, true], "RegExp With Flags, Trailing Block Comment, Newline, Tab"],
+["a  ", [3, 4], "Trailing Space Characters"],
+["a /* something */", [3, 4], "Trailing Block Comment"],
+["a\n\t// hah", [4, 5], "Trailing Linefeed, Tab, and Line Comment"],
+["/abc/de//f", [2, 3], [true, true], "RegExp With Flags, Trailing Line Comment"],
+["/abc/de/*f*/\n\t", [4, 5], [true, true, true, true], "RegExp With Flags, Trailing Block Comment, Newline, Tab"],
 
 // Regression Tests.
-["for (x;function(){ a\nb };z) x;", 21, "`for` Loop: Test Condition Contains Function Body With No Terminating `;`"],
-["c=function(){return;return};", 11, "Function Body: Two `return` Statements; No Terminating `;`"],
-["d\nd()", 5, "Identifier, Newline, Function Call"],
-["for(;;){x=function(){}}", 14, "Function Expression in `for` Loop Body"],
+["for (x;function(){ a\nb };z) x;", [21, 23], "`for` Loop: Test Condition Contains Function Body With No Terminating `;`"],
+["c=function(){return;return};", [11, 12], "Function Body: Two `return` Statements; No Terminating `;`"],
+["d\nd()", [5, 7], "Identifier, Newline, Function Call"],
+["for(;;){x=function(){}}", [14, 15], "Function Expression in `for` Loop Body"],
 ["for(var k;;){}", 10, "`for` Loop Header: Variable Declaration, Empty Test and Increment Conditions"],
-["({get foo(){ }})", 12, "Empty Getter"],
-["\nreturnr", 2, "Linefeed, Identifier Beginning With `return`"],
-["/ // / /", 4, [true, false, false, true], "RegExp Containing One Space, Division Operator, Space, RegExp Containing One Space"],
+["({get foo(){ }})", [12, 13], "Empty Getter"],
+["\nreturnr", [2, 3], "Linefeed, Identifier Beginning With `return`"],
+["/ // / /", [4, 5], [true, false, false, true], "RegExp Containing One Space, Division Operator, Space, RegExp Containing One Space"],
 ["trimRight = /\\s+$/;", 6, [false, false, false, false, true, false], "Typical `trimRight` RegExp"],
 ["trimLeft = /^\\s+/;\n\ttrimRight = /\\s+$/;", 14, [false, false, false, false, true, false, false, false, false, false, false, false, true, false], "`trimLeft` and `trimRight` RegExps"],
 ["\n\t// Used for trimming whitespace\n\ttrimLeft = /^\\s+/;\n\ttrimRight = /\\s+$/;\t\n", 21, [false, false, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false, true, false, false], "Annotated `trimLeft` and `trimRight` RegExps"],
@@ -450,31 +461,31 @@ var Tests = [
 
 ["({get:5});", 8, "`get` Used As Standard Property Name"],
 ["({set:5});", 8, "`get` Used As Standard Property Name"],
-["l !== \"px\" && (d.style(h, c, (k || 1) + l), j = (k || 1) / f.cur() * j, d.style(h, c, j + l)), i[1] && (k = (i[1] === \"-=\" ? -1 : 1) * k + j), f.custom(j, k, l)", 131, "Regression Test: RegExp/Division"],
+["l !== \"px\" && (d.style(h, c, (k || 1) + l), j = (k || 1) / f.cur() * j, d.style(h, c, j + l)), i[1] && (k = (i[1] === \"-=\" ? -1 : 1) * k + j), f.custom(j, k, l)", [131, 132], "Regression Test: RegExp/Division"],
 
 ["(/\'/g, \'\\\\\\\'\') + \"'\";'", 14, "Regression Test: Confusing Escape Character Sequence"],
-["/abc\//no_comment", 3, [true, false, false], "RegExp Followed By Line Comment"],
+["/abc\//no_comment", [3, 4], [true, false, false], "RegExp Followed By Line Comment"],
 ["a: b; c;", 8, "ASI Regression Test: Labeled Identifier, `;`, Identifier, `;`"],
 ["var x; function f(){ x; function g(){}}", 23, "Function Declaration Within Function Body"],
-["if (x) { break }", 11, "ASI: `if` Statement, `break`"],
-["x.hasOwnProperty()", 5, "Regression Test: Object Property Named `hasOwnProperty`"],
-["(x) = 5", 7, "LHS of Expression Contains Grouping Operator"],
-["(x,x) = 5", 9, "Syntactically Valid LHS Grouping Operator (Expression Will Produce A `ReferenceError` When Interpreted)"],
+["if (x) { break }", [11, 12], "ASI: `if` Statement, `break`"],
+["x.hasOwnProperty()", [5, 6], "Regression Test: Object Property Named `hasOwnProperty`"],
+["(x) = 5", [7, 8], "LHS of Expression Contains Grouping Operator"],
+["(x,x) = 5", [9, 10], "Syntactically Valid LHS Grouping Operator (Expression Will Produce A `ReferenceError` When Interpreted)"],
 ["switch(x){case 1:}", 10, "Single-`case` `switch` Statement Without Body"],
-["while (x) { ++a\t}", 12, "Prefix Increment Operator, Tab Character Within `while` Loop"],
+["while (x) { ++a\t}", [12, 13], "Prefix Increment Operator, Tab Character Within `while` Loop"],
 
-["{break}", 3, "ASI: `break`"],
-["{continue}", 3, "ASI: `continue`"],
-["{return}", 3, "ASI: `return`"],
-["{continue a}", 5, "ASI: `continue`, Identifier"],
-["{break b}", 5, "ASI: `break`, Identifier"],
-["{return c}", 5, "ASI: `return`, Identifier"],
+["{break}", [3, 4], "ASI: `break`"],
+["{continue}", [3, 4], "ASI: `continue`"],
+["{return}", [3, 4], "ASI: `return`"],
+["{continue a}", [5, 6], "ASI: `continue`, Identifier"],
+["{break b}", [5, 6], "ASI: `break`, Identifier"],
+["{return c}", [5, 6], "ASI: `return`, Identifier"],
 
 ["this.charsX = Gui.getSize(this.textarea).w / this.fontSize.w;", 25, "Complex Division Not Treated as RegExp"],
 ["(x)/ (y);", 9, "Parenthesized Dividend, Division Operator, Space, Parenthesized Divisor"],
-["/^(?:\\/(?![*\\n\\/])(?:\\[(?:\\\\.|[^\\]\\\\\\n])*\\]|\\\\.|[^\\[\\/\\\\\\n])+\\/[gim]*)$/", 1, [true], "Complex RegExp for Matching RegExps"],
+["/^(?:\\/(?![*\\n\\/])(?:\\[(?:\\\\.|[^\\]\\\\\\n])*\\]|\\\\.|[^\\[\\/\\\\\\n])+\\/[gim]*)$/", [1, 2], [true], "Complex RegExp for Matching RegExps"],
 ["({a:b}[ohi].iets()++);", 16, "Object Literal With 1 Member, Square Bracket Member Accessor, Dot Member Accessor, Function Call, Postfix Increment"],
 
-["switch(x){ default: foo; break; case x: break; default: fail; }", 30, "double default should include error token (30+1)"]
+["switch(x){ default: foo; break; case x: break; default: fail; }", [30, 34], "double default should include error token"]
 
 ];
