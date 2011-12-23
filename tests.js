@@ -473,6 +473,8 @@ var Tests = [
 ["this.charsX = Gui.getSize(this.textarea).w / this.fontSize.w;", 25, "Complex Division Not Treated as RegExp"],
 ["(x)/ (y);", 9, "Parenthesized Dividend, Division Operator, Space, Parenthesized Divisor"],
 ["/^(?:\\/(?![*\\n\\/])(?:\\[(?:\\\\.|[^\\]\\\\\\n])*\\]|\\\\.|[^\\[\\/\\\\\\n])+\\/[gim]*)$/", 1, [true], "Complex RegExp for Matching RegExps"],
-["({a:b}[ohi].iets()++);", 16, "Object Literal With 1 Member, Square Bracket Member Accessor, Dot Member Accessor, Function Call, Postfix Increment"]
+["({a:b}[ohi].iets()++);", 16, "Object Literal With 1 Member, Square Bracket Member Accessor, Dot Member Accessor, Function Call, Postfix Increment"],
+
+["switch(x){ default: foo; break; case x: break; default: fail; }", 31, "double default should include error token (30+1)"]
 
 ];
