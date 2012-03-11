@@ -580,10 +580,10 @@ Tokenizer.testSuite = function(arr){
 	var fail = 0;
 	for (var i=0; i<arr.length; ++i) {
 		var test = arr[i], result;
-		var input = test[1];
-		var outputLen = test[2];
-		var regexHints = test[4] ? test[3] : null; // if flags, then len=4
-		var desc = test[4] || test[3];
+		var input = test[0];
+		var outputLen = test[1].length ? test[1][0] : test[1];
+		var regexHints = test[3] ? test[2] : null; // if flags, then len=4
+		var desc = test[3] || test[2];
 		
 		var result = new Tokenizer(input).tokens(regexHints); // regexHints can be null, that's ok
 		if (result.length == outputLen) {
