@@ -35,3 +35,4 @@ var tree = []; // this should probably be refactored away some day
 var tokenizer = new Tokenizer(input); // dito
 var parser = new ZeParser(input, tokenizer, tree);
 parser.parse(); // returns tree..., should never throw errors
+
