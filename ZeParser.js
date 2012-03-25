@@ -183,7 +183,7 @@ ZeParser.prototype = {
 			// TOFIX: can probably get the regex out somehow...
 			if (!first) {
 				match = this.tokenizer.storeCurrentAndFetchNextToken(false, match, stack);
-				if (!(/*is left hand side start?*/ match.name <= 6 || this.regexLhsStart.test(match.value))) match = this.failsafe('ExpectedAnotherExpressionComma', match);
+				if (!(/*is left hand side start?*/ match.name <= 6 || match.name == 15/*TAG*/ || this.regexLhsStart.test(match.value))) match = this.failsafe('ExpectedAnotherExpressionComma', match);
 			}
 
 			if (this.ast) { //#ifdef FULL_AST
@@ -234,8 +234,8 @@ ZeParser.prototype = {
 					} //#endif
 
 					match = this.tokenizer.storeCurrentAndFetchNextToken(false, match, stack);
-					// ensure that it is in fact a valid lhs-start
-					if (!(/*is left hand side start?*/ match.name <= 6 || this.regexLhsStart.test(match.value))) match = this.failsafe('ExpectedAnotherExpressionRhs', match);
+					// ensure that it is in fact a valid lhs-start. TAG is a custom extension for optional tag literal syntax support.
+					if (!(/*is left hand side start?*/ match.name <= 6 || match.name == 15/*TAG*/ || this.regexLhsStart.test(match.value))) match = this.failsafe('ExpectedAnotherExpressionRhs', match);
 					// not allowed to parse assignment
 					parsedUnaryOperator = true;
 				};
@@ -263,7 +263,7 @@ ZeParser.prototype = {
 						match.isGroupStart = true;
 					} //#endif
 					match = this.tokenizer.storeCurrentAndFetchNextToken(false, match, stack);
-					if (!(/*is left hand side start?*/ match.name <= 6 || this.regexLhsStart.test(match.value))) match = this.failsafe('GroupingShouldStartWithExpression', match);
+					if (!(/*is left hand side start?*/ match.name <= 6 || match.name == 15/*TAG*/ || this.regexLhsStart.test(match.value))) match = this.failsafe('GroupingShouldStartWithExpression', match);
 					// keep parsing expressions as long as they are followed by a comma
 					match = this.eatExpressions(false, match, stack);
 
@@ -311,7 +311,7 @@ ZeParser.prototype = {
 					while (foundAtLeastOneComma && match.value != ']') {
 						foundAtLeastOneComma = false;
 
-						if (!(/*is left hand side start?*/ match.name <= 6 || this.regexLhsStart.test(match.value)) && match.name != 14/*error*/) match = this.failsafe('ArrayShouldStartWithExpression', match);
+						if (!(/*is left hand side start?*/ match.name <= 6 || match.name == 15/*TAG*/ || this.regexLhsStart.test(match.value)) && match.name != 14/*error*/) match = this.failsafe('ArrayShouldStartWithExpression', match);
 						match = this.eatExpressions(false, match, stack, true);
 
 						while (match.value == ',') {
@@ -546,7 +546,7 @@ ZeParser.prototype = {
 						stack = oldstack;
 						this.scope = oldscope;
 					} //#endif
-				} else if (match.name <= 6) { // IDENTIFIER STRING_SINGLE STRING_DOUBLE NUMERIC_HEX NUMERIC_DEC REG_EX
+				} else if (match.name <= 6 || match.name == 15/*TAG*/) { // IDENTIFIER STRING_SINGLE STRING_DOUBLE NUMERIC_HEX NUMERIC_DEC REG_EX or TAG
 					// save it in case it turns out to be a label.
 					var possibleLabel = match;
 
@@ -674,7 +674,7 @@ ZeParser.prototype = {
 						} //#endif
 						// property access, read expression list. allow assignments
 						match = this.tokenizer.storeCurrentAndFetchNextToken(false, match, stack);
-						if (!(/*is left hand side start?*/ match.name <= 6 || this.regexLhsStart.test(match.value))) {
+						if (!(/*is left hand side start?*/ match.name <= 6 || match.name == 15/*TAG*/ || this.regexLhsStart.test(match.value))) {
 							if (match.value == ']') match = this.failsafe('SquareBracketsMayNotBeEmpty', match);
 							else match = this.failsafe('SquareBracketExpectsExpression', match);
 						}
@@ -703,7 +703,7 @@ ZeParser.prototype = {
 						} //#endif
 						// call expression, eat optional expression list, disallow assignments
 						match = this.tokenizer.storeCurrentAndFetchNextToken(false, match, stack);
-						if (/*is left hand side start?*/ match.name <= 6 || this.regexLhsStart.test(match.value)) match = this.eatExpressions(false, match, stack); // arguments are optional
+						if (/*is left hand side start?*/ match.name <= 6 || match.name == 15/*TAG*/ || this.regexLhsStart.test(match.value)) match = this.eatExpressions(false, match, stack); // arguments are optional
 						if (match.value != ')') match = this.failsafe('UnclosedCallParens', match);
 						if (this.ast) { //#ifdef FULL_AST
 							match.twin = lhp;
@@ -778,7 +778,7 @@ ZeParser.prototype = {
 						if (ternary) {
 							// LogicalORExpression "?" AssignmentExpression ":" AssignmentExpression
 							// so that means just one expression center and right.
-							if (!(/*is left hand side start?*/ match.name <= 6 || this.regexLhsStart.test(match.value))) this.failignore('InvalidCenterTernaryExpression', match, stack);
+							if (!(/*is left hand side start?*/ match.name <= 6 || match.name == 15/*TAG*/ || this.regexLhsStart.test(match.value))) this.failignore('InvalidCenterTernaryExpression', match, stack);
 							match = this.eatExpressions(false, match, stack, true, forHeader); // only one expression allowed inside ternary center/right
 
 							if (match.value != ':') {
@@ -809,7 +809,7 @@ ZeParser.prototype = {
 				} while (ternary); // if we just parsed a ternary expression, we need to check _again_ whether the next token is a binary operator.
 
 				// start over. match is the rhs for the lhs we just parsed, but lhs for the next expression
-				if (parseAnotherExpression && !(/*is left hand side start?*/ match.name <= 6 || this.regexLhsStart.test(match.value))) {
+				if (parseAnotherExpression && !(/*is left hand side start?*/ match.name <= 6 || match.name == 15/*TAG*/ || this.regexLhsStart.test(match.value))) {
 					// no idea what to do now. lets just ignore and see where it ends. TOFIX: maybe just break the loop or return?
 					this.failignore('InvalidRhsExpression', match, stack);
 				}
@@ -1073,7 +1073,7 @@ ZeParser.prototype = {
 					stack = singleDecStack;
 				} //#endif
 
-				if (!(/*is left hand side start?*/ match.name <= 6 || match.name == 14/*error*/ || this.regexLhsStart.test(match.value))) match = this.failsafe('VarInitialiserExpressionExpected', match);
+				if (!(/*is left hand side start?*/ match.name <= 6 || match.name == 15/*TAG*/ || match.name == 14/*error*/ || this.regexLhsStart.test(match.value))) match = this.failsafe('VarInitialiserExpressionExpected', match);
 				match = this.eatExpressions(false, match, stack, true, forHeader); // only one expression 
 				// var statement: comma or semi now
 				// for statement: semi, comma or 'in'
@@ -1115,7 +1115,7 @@ ZeParser.prototype = {
 			match.statementHeaderStart = true;
 		} //#endif
 		match = this.tokenizer.storeCurrentAndFetchNextToken(false, match, stack);
-		if (!(/*is left hand side start?*/ match.name <= 6 || this.regexLhsStart.test(match.value))) match = this.failsafe('StatementHeaderIsNotOptional', match);
+		if (!(/*is left hand side start?*/ match.name <= 6 || match.name == 15/*TAG*/ || this.regexLhsStart.test(match.value))) match = this.failsafe('StatementHeaderIsNotOptional', match);
 		match = this.eatExpressions(false, match, stack);
 		if (match.value != ')') match = this.failsafe('ExpectedStatementHeaderClose', match);
 		if (this.ast) { //#ifdef FULL_AST
@@ -1183,7 +1183,7 @@ ZeParser.prototype = {
 			match.statementHeaderStart = true;
 		} //#endif
 		match = this.tokenizer.storeCurrentAndFetchNextToken(false, match, stack);
-		if (!(/*is left hand side start?*/ match.name <= 6 || this.regexLhsStart.test(match.value))) match = this.failsafe('StatementHeaderIsNotOptional', match);
+		if (!(/*is left hand side start?*/ match.name <= 6 || match.name == 15/*TAG*/ || this.regexLhsStart.test(match.value))) match = this.failsafe('StatementHeaderIsNotOptional', match);
 		match = this.eatExpressions(false, match, stack);
 		if (match.value != ')') match = this.failsafe('ExpectedStatementHeaderClose', match);
 		if (this.ast) { //#ifdef FULL_AST
@@ -1223,7 +1223,7 @@ ZeParser.prototype = {
 			match.statementHeaderStart = true;
 		} //#endif
 		match = this.tokenizer.storeCurrentAndFetchNextToken(false, match, stack);
-		if (!(/*is left hand side start?*/ match.name <= 6 || this.regexLhsStart.test(match.value))) match = this.failsafe('StatementHeaderIsNotOptional', match);
+		if (!(/*is left hand side start?*/ match.name <= 6 || match.name == 15/*TAG*/ || this.regexLhsStart.test(match.value))) match = this.failsafe('StatementHeaderIsNotOptional', match);
 		match = this.eatExpressions(false, match, stack);
 		if (match.value != ')') match = this.failsafe('ExpectedStatementHeaderClose', match);
 		if (this.ast) { //#ifdef FULL_AST
@@ -1270,7 +1270,7 @@ ZeParser.prototype = {
 		if (match.value == 'var') {
 			match = this.eatVarDecl(match, stack, true);
 		} else if (match.value != ';') { // expressions are optional in for-each
-			if (!(/*is left hand side start?*/ match.name <= 6 || this.regexLhsStart.test(match.value))) {
+			if (!(/*is left hand side start?*/ match.name <= 6 || match.name == 15/*TAG*/ || this.regexLhsStart.test(match.value))) {
 				this.failignore('StatementHeaderIsNotOptional', match, stack);
 			}
 			match = this.eatExpressions(false, match, stack, false, true); // can parse multiple expressions, in is not ok here
@@ -1301,13 +1301,13 @@ ZeParser.prototype = {
 			} //#endif
 			// parse another optional no-in expression, another semi and then one more optional no-in expression
 			match = this.tokenizer.storeCurrentAndFetchNextToken(false, match, stack);
-			if (/*is left hand side start?*/ match.name <= 6 || this.regexLhsStart.test(match.value)) match = this.eatExpressions(false, match, stack); // in is ok here
+			if (/*is left hand side start?*/ match.name <= 6 || match.name == 15/*TAG*/ || this.regexLhsStart.test(match.value)) match = this.eatExpressions(false, match, stack); // in is ok here
 			if (match.value != ';') match = this.failsafe('ExpectedSecondSemiOfForHeader', match);
 			if (this.ast) { //#ifdef FULL_AST
 				match.forEachHeaderStop = true;
 			} //#endif
 			match = this.tokenizer.storeCurrentAndFetchNextToken(false, match, stack);
-			if (/*is left hand side start?*/ match.name <= 6 || this.regexLhsStart.test(match.value)) match = this.eatExpressions(false, match, stack); // in is ok here
+			if (/*is left hand side start?*/ match.name <= 6 || match.name == 15/*TAG*/ || this.regexLhsStart.test(match.value)) match = this.eatExpressions(false, match, stack); // in is ok here
 		}
 
 		if (match.value != ')') match = this.failsafe('ExpectedStatementHeaderClose', match);
@@ -1447,7 +1447,7 @@ ZeParser.prototype = {
 			match.statementHeaderStart = true;
 		} //#endif
 		match = this.tokenizer.storeCurrentAndFetchNextToken(false, match, stack);
-		if (!(/*is left hand side start?*/ match.name <= 6 || this.regexLhsStart.test(match.value))) {
+		if (!(/*is left hand side start?*/ match.name <= 6 || match.name == 15/*TAG*/ || this.regexLhsStart.test(match.value))) {
 			this.failignore('StatementHeaderIsNotOptional', match, stack);
 		}
 		match = this.eatExpressions(false, match, stack);
@@ -1799,7 +1799,7 @@ ZeParser.prototype = {
 			match.statementHeaderStart = true;
 		} //#endif
 		match = this.tokenizer.storeCurrentAndFetchNextToken(false, match, stack);
-		if (!(/*is left hand side start?*/ match.name <= 6 || this.regexLhsStart.test(match.value))) match = this.failsafe('StatementHeaderIsNotOptional', match);
+		if (!(/*is left hand side start?*/ match.name <= 6 || match.name == 15/*TAG*/ || this.regexLhsStart.test(match.value))) match = this.failsafe('StatementHeaderIsNotOptional', match);
 		match = this.eatExpressions(false, match, stack);
 		if (match.value != ')') match = this.failsafe('ExpectedStatementHeaderClose', match);
 		if (this.ast) { //#ifdef FULL_AST

@@ -20,12 +20,12 @@ function Tokenizer(inp){
 	this.line = 0;
 	this.column = 0;
 	this.cache = {};
-	
+
 	this.errorStack = [];
-	
+
 	this.wtree = [];
 	this.btree = [];
-	
+
 //	this.regexWhiteSpace = Tokenizer.regexWhiteSpace;
 	this.regexLineTerminator = Tokenizer.regexLineTerminator; // used in fallback
 	this.regexAsciiIdentifier = Tokenizer.regexAsciiIdentifier;
@@ -38,20 +38,23 @@ function Tokenizer(inp){
 //	this.regexPunctuators = Tokenizer.regexPunctuators;
 	this.regexNumber = Tokenizer.regexNumber;
 	this.regexNewline = Tokenizer.regexNewline;
-	
+
 	this.regexBig = Tokenizer.regexBig;
 	this.regexBigAlt = Tokenizer.regexBigAlt;
-	
+
 	this.tokenCount = 0;
 	this.tokenCountNoWhite = 0;
-	
+
 	this.Unicode = window.Unicode;
-	
+
 	// if the Parser throws an error. it will set this property to the next match
 	// at the time of the error (which was not what it was expecting at that point) 
 	// and pass on an "error" match. the error should be scooped on the stack and 
 	// this property should be returned, without looking at the input...
 	this.errorEscape = null;
+
+	// support tag literals
+	this.tagLiterals = false;
 };
 
 Tokenizer.prototype = {
@@ -62,10 +65,10 @@ Tokenizer.prototype = {
 	column:null,
 	cache:null,
 	errorStack:null,
-	
+
 	wtree: null, // contains whitespace (spaces, comments, newlines)
 	btree: null, // does not contain any whitespace tokens.
-	
+
 	regexLineTerminator:null,
 	regexAsciiIdentifier:null,
 	hashAsciiIdentifier:null,
@@ -79,9 +82,9 @@ Tokenizer.prototype = {
 	regexBigAlt:null,
 	tokenCount:null,
 	tokenCountNoWhite:null,
-	
+
 	Unicode:null,
-	
+
 	// storeCurrentAndFetchNextToken(bool, false, false true) to get just one token
 	storeCurrentAndFetchNextToken: function(noRegex, returnValue, stack, _dontStore){
 		var regex = !noRegex; // TOFIX :)
@@ -101,16 +104,16 @@ Tokenizer.prototype = {
 				}
 			}
 			_dontStore = false;
-		
+
 			if (pos >= inp.length) {
 				returnValue = {start:inp.length,stop:inp.length,name:12/*EOF*/};
-				break; 
+				break;
 			}
 			var returnValue = null;
-		
+
 			var start = pos;
 			var chr = inp[pos];
-	
+
 			//							1 ws							2 lt				   3 scmt 4 mcmt 5/6 str 7 nr     8 rx  9 punc
 			//if (true) {
 				// substring method (I think this is faster..)
@@ -122,7 +125,7 @@ Tokenizer.prototype = {
 			//	this.regexBigAlt.lastIndex = pos;
 			//	var part = this.regexBigAlt.exec(inp);
 			//}
-			
+
 			if (part[1]) { //this.regexWhiteSpace.test(chr)) { // SP, TAB, VT, FF, NBSP, BOM (, TOFIX: USP)
 				++pos;
 				returnValue = {start:start,stop:pos,name:9/*WHITE_SPACE*/,line:this.line,col:this.column,isWhite:true};
@@ -153,7 +156,7 @@ Tokenizer.prototype = {
 				} else {
 					pos = newpos+2;
 					returnValue = {start:start,stop:pos,name:8/*COMMENT_MULTI*/,value:inp.substring(start, pos),line:this.line,col:this.column,isComment:true,isWhite:true};
-	
+
 					// multi line comments are also reason for asi, but only if they contain at least one newline (use shadow input, because all line terminators would be valid...)
 					var shadowValue = shadowInp.substring(start, pos);
 					var i = 0, hasNewline = 0;
@@ -172,7 +175,7 @@ Tokenizer.prototype = {
 			} else if (part[5]) { //chr == "'") {
 				// old method
 				//console.log("old method");
-				
+
 				var hasNewline = 0;
 				do {
 					// process escaped characters
@@ -200,7 +203,7 @@ Tokenizer.prototype = {
 					} else {
 						this.column += (pos-start);
 					}
-				}				
+				}
 			} else if (part[6]) { //chr == '"') {
 				var hasNewline = 0;
 				// TODO: something like this: var regexmatch = /([^\']|$)+/.match();
@@ -249,7 +252,7 @@ Tokenizer.prototype = {
 				} else {
 					throw 'unexpected parser errror... regex fail :(';
 				}
-				
+
 				if (value.length < 300) {
 					pos += value.length;
 				} else {
@@ -278,8 +281,8 @@ Tokenizer.prototype = {
 						nonLethalError = Tokenizer.Error.NothingToRepeat;
 					} else if (chr == '^') {
 						if (
-							inp[pos-1] != '/' && 
-							inp[pos-1] != '|' && 
+							inp[pos-1] != '/' &&
+							inp[pos-1] != '|' &&
 							inp[pos-1] != '(' &&
 							!(inp[pos-3] == '(' && inp[pos-2] == '?' && (inp[pos-1] == ':' || inp[pos-1] == '!' || inp[pos-1] == '='))
 						) {
@@ -313,7 +316,7 @@ Tokenizer.prototype = {
 									if (shadowInp[pos+1] == '\n') break;
 									else ++pos; // skip next char. (mainly prohibits ] to be picked up as closing the group...)
 								}
-							} 
+							}
 							if (inp[pos] != ']') {
 								returnValue = {start:start,stop:pos,name:14/*error*/,tokenError:true,error:Tokenizer.Error.ClosingClassRangeNotFound};
 								this.errorStack.push(returnValue);
@@ -327,9 +330,9 @@ Tokenizer.prototype = {
 							// is ok anywhere in the regex (match next char literally, regardless of its otherwise special meaning)
 							++pos;
 						}
-						
+
 						// now process repeaters (+, ? and *)
-						
+
 						// non-collecting group (?:...) and positive (?=...) or negative (?!...) lookahead
 						if (chr == '(') {
 							if (inp[pos+1] == '?' && (inp[pos+2] == ':' || inp[pos+2] == '=' || inp[pos+2] == '!')) {
@@ -377,8 +380,8 @@ Tokenizer.prototype = {
 				} else {
 					// this is the identifier scanner, for now
 					do ++pos;
-					while (pos < inp.length && this.hashAsciiIdentifier[inp[pos]]); /*this.regexAsciiIdentifier.test(inp[pos])*/ 
-	
+					while (pos < inp.length && this.hashAsciiIdentifier[inp[pos]]); /*this.regexAsciiIdentifier.test(inp[pos])*/
+
 					if (parens.length) {
 						// nope, this is still an error, there was at least one paren that did not have a matching twin
 						if (parens.length > 0) returnValue = {start:start,stop:pos,name:14/*error*/,tokenError:true,error:Tokenizer.Error.RegexOpenGroup};
@@ -388,16 +391,114 @@ Tokenizer.prototype = {
 						this.errorStack.push(returnValue);
 					} else {
 						returnValue = {start:start,stop:pos,name:1/*REG_EX*/,isPrimitive:true};
-					}				
+					}
 				}
 				returnValue.twinfo = twinfo;
+      } else if (regex && part[9]) { // this.tagLiterals
+				function tagOpen(node){
+					var r = /[^\S]*([a-zA-Z][a-zA-Z0-9-]*)/g;
+					r.lastIndex = pos+1;
+					var tag = r.exec(inp);
+					if (tag) {
+						pos = r.lastIndex;
+						node.name = tag[1];
+						node.attributes = {};
+
+						// var r = /[^\S]+([a-zA-Z0-9-]+)(?:=(?:(?:"([^"]*?)")|(?:'([^']*?)')))?/g; r.lastIndex = 11; r.exec(' aabc="bef" c=\'d\' hidden'); r.lastIndex
+		        var s = /[^\S]+([a-zA-Z0-9-]+)(?:=(?:(?:"([^"]*?)")|(?:'([^']*?)')))?/g;
+						var attr = '';
+						var lastIndex = pos = s.lastIndex = r.lastIndex;
+						attr = s.exec(inp);
+						while (attr && attr.index == pos) {
+							if (typeof attr[2] == 'undefined') node.attributes[attr[1]] = attr[3];
+							else node.attributes[attr[1]] = attr[2];
+							pos = lastIndex = s.lastIndex;
+							attr = s.exec(inp);
+						}
+
+						// it was a unary tag
+						var t = /[^\S]*\/[^\S]*>/g;
+						t.lastIndex = lastIndex;
+						var x = t.exec(inp);
+	          node.unary = !!x && x.index == pos;
+						if (node.unary) {
+							pos = t.lastIndex;
+							return true;
+						}
+						// it was a binary tag
+						var u = /[^\S]*?>/g;
+						u.lastIndex = lastIndex;
+						var x = u.exec(inp);
+						if (x && x.index == pos) {
+	            node.children = [];
+	            // now parse strings and other tags until you find a closing tag on the same level...
+							pos = u.lastIndex;
+              return true;
+						}
+            // i dont know what that was
+						throw console.warn("Error parsing tag");
+						return false;
+					}
+				}
+
+        function tagBody(node){
+					do {
+            var start = pos;
+
+	          var r = /([^<]*)/g;
+						r.lastIndex = pos;
+						var text = r.exec(inp);
+						if (text && text[1]) {
+							node.children.push(text[1]);
+							pos = r.lastIndex;
+						}
+						if (inp[pos] == '<') {
+							var s = /<[^\S]*[\/>]*\//g;
+							s.lastIndex = pos;
+							var x = s.exec(inp);
+							if (x && x.index == pos) {
+								return node; // end of body
+							}
+							node.children.push(tag({}));
+						}
+					} while (start != pos);
+        }
+
+				function tagClose(node){
+					var r = /<[^\S]*\/[^\S]*([a-zA-Z0-9-]+)[^\S]*>/g;
+					r.lastIndex = pos;
+					var ctag = r.exec(inp);
+					if (ctag) {
+						pos = r.lastIndex;
+						if (node.name == ctag[1]) return true;
+						return false; // was not expecting to close this tag
+					}
+
+          // tagClose should only be called if the next chars are starting a closing tag...
+          return false;
+				}
+
+				function tag(node){
+	        if (!tagOpen(node)) {
+						return node;
+					}
+	        if (!node.unary) {
+	          tagBody(node);
+	          tagClose(node);
+	        }
+					return node;
+				}
+
+        var root = tag({});
+
+				returnValue = {start:start,stop:pos,name:15/*TAG*/,isPrimitive:true,root:root};
 			} else {
 				// note: operators need to be ordered from longest to smallest. regex will take care of the rest.
 				// no need to worry about div vs regex. if looking for regex, earlier if will have eaten it
 				//var result = this.regexPunctuators.exec(inp.substring(pos,pos+4));
-				
-				// note: due to the regex, the single forward slash might be caught by an earlier part of the regex. so check for that.
-				var result = part[8] || part[9];
+
+				// note: due to the regex, the single / or < might be caught by an earlier part of the regex. so check for that.
+				var result = part[8] || part[9] || part[10];
 				if (result) {
 					//result = result[1];
 					returnValue = {start:pos,stop:pos+=result.length,name:11/*PUNCTUATOR*/,value:result};
@@ -406,7 +507,7 @@ Tokenizer.prototype = {
 					// identifiers cannot start with a number. but if the leading string would be a number, another if would have eaten it already for numeric literal :)
 					while (pos < inp.length) {
 						var c = inp[pos];
-	
+
 						if (this.hashAsciiIdentifier[c]) ++pos; //if (this.regexAsciiIdentifier.test(c)) ++pos;
 						else if (c == '\\' && this.regexUnicodeEscape.test(inp.substring(pos,pos+6))) pos += 6; // this is like a \uxxxx
 						// ok, now test unicode ranges...
@@ -419,17 +520,17 @@ Tokenizer.prototype = {
 							var Unicode = this.Unicode; // cache
 							if (!(
 									// these may all occur in an identifier... (pure a specification compliance thing :)
-									Unicode.Lu.test(c) || Unicode.Ll.test(c) || Unicode.Lt.test(c) || Unicode.Lm.test(c) || 
+									Unicode.Lu.test(c) || Unicode.Ll.test(c) || Unicode.Lt.test(c) || Unicode.Lm.test(c) ||
 									Unicode.Lo.test(c) || Unicode.Nl.test(c) || Unicode.Mn.test(c) || Unicode.Mc.test(c) ||
 									Unicode.Nd.test(c) || Unicode.Pc.test(c) || Unicode.sp.test(c)
 							)) break; // end of match.
 							// passed, next char
 							++pos;
 						} else break; // end of match.
-			
+
 						found = true;
 					}
-		
+
 					if (found) {
 						returnValue = {start:start,stop:pos,name:2/*IDENTIFIER*/,value:inp.substring(start,pos)};
 						if (returnValue.value == 'undefined' || returnValue.value == 'null' || returnValue.value == 'true' || returnValue.value == 'false') returnValue.isPrimitive = true;
@@ -454,7 +555,7 @@ Tokenizer.prototype = {
 					}
 				}
 			}
-			
+
 			if (returnValue) {
 				// note that ASI's are slipstreamed in here from the parser since the tokenizer cant determine that
 				// if this part ever changes, make sure you change that too :)
@@ -463,15 +564,15 @@ Tokenizer.prototype = {
 				if (!returnValue.isWhite) {
 					returnValue.tokposb = this.btree.length;
 					this.btree.push(returnValue);
-				} 
+				}
 			}
-			
-			
+
+
 		} while (stack && returnValue && returnValue.isWhite); // WHITE_SPACE LINETERMINATOR COMMENT_SINGLE COMMENT_MULTI
 		++this.tokenCountNoWhite;
-		
+
 		this.pos = pos;
-	
+
 		if (matchedNewline) returnValue.newline = true;
 		return returnValue;
 	},
@@ -584,7 +685,7 @@ Tokenizer.testSuite = function(arr){
 		var outputLen = test[1].length ? test[1][0] : test[1];
 		var regexHints = test[3] ? test[2] : null; // if flags, then len=4
 		var desc = test[3] || test[2];
-		
+
 		var result = new Tokenizer(input).tokens(regexHints); // regexHints can be null, that's ok
 		if (result.length == outputLen) {
 			debug('<span class="green">Test '+i+' ok:</span>',desc);
@@ -607,7 +708,7 @@ Tokenizer.hashAsciiIdentifier = {_:1,$:1,a:1,b:1,c:1,d:1,e:1,f:1,g:1,h:1,i:1,j:1
 Tokenizer.regexHex = /[0-9A-Fa-f]/;
 Tokenizer.hashHex = {0:1,1:1,2:1,3:1,4:1,5:1,6:1,7:1,8:1,9:1,a:1,b:1,c:1,d:1,e:1,f:1,A:1,B:1,C:1,D:1,E:1,F:1};
 Tokenizer.regexUnicodeEscape = /u[0-9A-Fa-f]{4}/; // the \ is already checked at usage...
-Tokenizer.regexIdentifierStop = /[\>\=\!\|\<\+\-\&\*\%\^\/\{\}\(\)\[\]\.\;\,\~\?\:\ \t\n\\\'\"]/; 
+Tokenizer.regexIdentifierStop = /[\>\=\!\|\<\+\-\&\*\%\^\/\{\}\(\)\[\]\.\;\,\~\?\:\ \t\n\\\'\"]/;
 Tokenizer.hashIdentifierStop = {'>':1,'=':1,'!':1,'|':1,'<':1,'+':1,'-':1,'&':1,'*':1,'%':1,'^':1,'/':1,'{':1,'}':1,'(':1,')':1,'[':1,']':1,'.':1,';':1,',':1,'~':1,'?':1,':':1,'\\':1,'\'':1,'"':1,' ':1,'\t':1,'\n':1};
 Tokenizer.regexNewline = /\n/g;
 //Tokenizer.regexPunctuators = /^(>>>=|===|!==|>>>|<<=|>>=|<=|>=|==|!=|\+\+|--|<<|>>|\&\&|\|\||\+=|-=|\*=|%=|\&=|\|=|\^=|\/=|\{|\}|\(|\)|\[|\]|\.|;|,|<|>|\+|-|\*|%|\||\&|\||\^|!|~|\?|:|=|\/)/;
@@ -615,8 +716,13 @@ Tokenizer.Unidocde = window.Unicode;
 Tokenizer.regexNumber = /^(?:(0[xX][0-9A-Fa-f]+)|((?:(?:(?:(?:[0-9]+)(?:\.[0-9]*)?))|(?:\.[0-9]+))(?:[eE][-+]?[0-9]{1,})?))/;
 Tokenizer.regexNormalizeNewlines = /(\u000D[^\u000A])|[\u2028\u2029]/;
 
-//							1 ws							2 lt				   3 scmt 4 mcmt 5/6 str 7 nr     8 rx  9 punc
-Tokenizer.regexBig = /^([ \t\u000B\u000C\u00A0\uFFFF])?([\u000A\u000D\u2028\u2029])?(\/\/)?(\/\*)?(')?(")?(\.?[0-9])?(?:(\/)[^=])?(>>>=|===|!==|>>>|<<=|>>=|<=|>=|==|!=|\+\+|--|<<|>>|\&\&|\|\||\+=|-=|\*=|%=|\&=|\|=|\^=|\/=|\{|\}|\(|\)|\[|\]|\.|;|,|<|>|\+|-|\*|%|\||\&|\||\^|!|~|\?|:|=|\/)?/;
+// Tokenizer.regexUnaryTag = /<\s*(\S)(?:\s+)?/>/;
+// /<\s*(\S+)\/>/.exec('< foo/>')
+// /[^\S]+([a-zA-Z0-9-]+)(?:="([^"]*)")?/g.exec(' a-b="b"')
+
+
+//                      1 ws                            2 lt                        3 scmt 4 mcmt 5/6 str 7 nr       8 rx         9 dom        10 punc
+Tokenizer.regexBig = /^([ \t\u000B\u000C\u00A0\uFFFF])?([\u000A\u000D\u2028\u2029])?(\/\/)?(\/\*)?(')?(")?(\.?[0-9])?(?:(\/)[^=])?(?:(<)[^<=])?(>>>=|===|!==|>>>|<<=|>>=|<=|>=|==|!=|\+\+|--|<<|>>|\&\&|\|\||\+=|-=|\*=|%=|\&=|\|=|\^=|\/=|\{|\}|\(|\)|\[|\]|\.|;|,|<|>|\+|-|\*|%|\||\&|\||\^|!|~|\?|:|=|\/)?/;
 Tokenizer.regexBigAlt = /([ \t\u000B\u000C\u00A0\uFFFF])?([\u000A\u000D\u2028\u2029])?(\/\/)?(\/\*)?(')?(")?(\.?[0-9])?(?:(\/)[^=])?(>>>=|===|!==|>>>|<<=|>>=|<=|>=|==|!=|\+\+|--|<<|>>|\&\&|\|\||\+=|-=|\*=|%=|\&=|\|=|\^=|\/=|\{|\}|\(|\)|\[|\]|\.|;|,|<|>|\+|-|\*|%|\||\&|\||\^|!|~|\?|:|=|\/)?/g;
 
 Tokenizer.Error = {
