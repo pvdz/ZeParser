@@ -42,6 +42,15 @@ function Tokenizer(inp){
 	this.regexBig = Tokenizer.regexBig;
 	this.regexBigAlt = Tokenizer.regexBigAlt;
 
+  // stuff for parsing tag literals
+  this.regexTagName = Tokenizer.regexTagName;
+  this.regexTagAttributes = Tokenizer.regexTagAttributes;
+  this.regexTagUnarySuffix = Tokenizer.regexTagUnarySuffix;
+  this.regexTagBinarySuffix = Tokenizer.regexTagBinarySuffix;
+  this.regexTagBody = Tokenizer.regexTagBody;
+  this.regexTagOpenOrClose = Tokenizer.regexTagOpenOrClose;
+  this.regexTagClose = Tokenizer.regexTagClose;
+
 	this.tokenCount = 0;
 	this.tokenCountNoWhite = 0;
 
@@ -395,90 +404,89 @@ Tokenizer.prototype = {
 				}
 				returnValue.twinfo = twinfo;
       } else if (regex && part[9]) { // this.tagLiterals
-				function tagOpen(node){
-					var r = /[^\S]*([a-zA-Z][a-zA-Z0-9-]*)/g;
-					r.lastIndex = pos+1;
-					var tag = r.exec(inp);
+				var tagOpen = function(node){
+					var regexTagName = this.regexTagName;
+					regexTagName.lastIndex = pos+1;
+					var tag = regexTagName.exec(inp);
 					if (tag) {
-						pos = r.lastIndex;
+						pos = regexTagName.lastIndex;
 						node.name = tag[1];
 						node.attributes = {};
 
-						// var r = /[^\S]+([a-zA-Z0-9-]+)(?:=(?:(?:"([^"]*?)")|(?:'([^']*?)')))?/g; r.lastIndex = 11; r.exec(' aabc="bef" c=\'d\' hidden'); r.lastIndex
-		        var s = /[^\S]+([a-zA-Z0-9-]+)(?:=(?:(?:"([^"]*?)")|(?:'([^']*?)')))?/g;
+		        var regexTagAttributes = this.regexTagAttributes;
 						var attr = '';
-						var lastIndex = pos = s.lastIndex = r.lastIndex;
-						attr = s.exec(inp);
+						var lastIndex = pos = regexTagAttributes.lastIndex = regexTagName.lastIndex;
+						attr = regexTagAttributes.exec(inp);
 						while (attr && attr.index == pos) {
 							if (typeof attr[2] == 'undefined') node.attributes[attr[1]] = attr[3];
 							else node.attributes[attr[1]] = attr[2];
-							pos = lastIndex = s.lastIndex;
-							attr = s.exec(inp);
+							pos = lastIndex = regexTagAttributes.lastIndex;
+							attr = regexTagAttributes.exec(inp);
 						}
 
 						// it was a unary tag
-						var t = /[^\S]*\/[^\S]*>/g;
-						t.lastIndex = lastIndex;
-						var x = t.exec(inp);
+						var regexTagUnarySuffix = this.regexTagUnarySuffix;
+						regexTagUnarySuffix.lastIndex = lastIndex;
+						var x = regexTagUnarySuffix.exec(inp);
 	          node.unary = !!x && x.index == pos;
 						if (node.unary) {
-							pos = t.lastIndex;
+							pos = regexTagUnarySuffix.lastIndex;
 							return true;
 						}
 						// it was a binary tag
-						var u = /[^\S]*?>/g;
-						u.lastIndex = lastIndex;
-						var x = u.exec(inp);
+						var regexTagBinarySuffix = this.regexTagBinarySuffix;
+						regexTagBinarySuffix.lastIndex = lastIndex;
+						var x = regexTagBinarySuffix.exec(inp);
 						if (x && x.index == pos) {
 	            node.children = [];
 	            // now parse strings and other tags until you find a closing tag on the same level...
-							pos = u.lastIndex;
+							pos = regexTagBinarySuffix.lastIndex;
               return true;
 						}
             // i dont know what that was
 						throw console.warn("Error parsing tag");
 						return false;
 					}
-				}
+				}.bind(this);
 
-        function tagBody(node){
+        var tagBody = function(node){
 					do {
             var start = pos;
 
-	          var r = /([^<]*)/g;
-						r.lastIndex = pos;
-						var text = r.exec(inp);
+	          var regexTagBody = this.regexTagBody;
+						regexTagBody.lastIndex = pos;
+						var text = regexTagBody.exec(inp);
 						if (text && text[1]) {
 							node.children.push(text[1]);
-							pos = r.lastIndex;
+							pos = regexTagBody.lastIndex;
 						}
 						if (inp[pos] == '<') {
-							var s = /<[^\S]*[\/>]*\//g;
-							s.lastIndex = pos;
-							var x = s.exec(inp);
+							var regexTagOpenOrClose = this.regexTagOpenOrClose;
+							regexTagOpenOrClose.lastIndex = pos;
+							var x = regexTagOpenOrClose.exec(inp);
 							if (x && x.index == pos) {
 								return node; // end of body
 							}
 							node.children.push(tag({}));
 						}
 					} while (start != pos);
-        }
+        }.bind(this);
 
-				function tagClose(node){
-					var r = /<[^\S]*\/[^\S]*([a-zA-Z0-9-]+)[^\S]*>/g;
-					r.lastIndex = pos;
-					var ctag = r.exec(inp);
+				var tagClose = function(node){
+					var regexTagClose = this.regexTagClose;
+					regexTagClose.lastIndex = pos;
+					var ctag = regexTagClose.exec(inp);
 					if (ctag) {
-						pos = r.lastIndex;
+						pos = regexTagClose.lastIndex;
 						if (node.name == ctag[1]) return true;
 						return false; // was not expecting to close this tag
 					}
 
           // tagClose should only be called if the next chars are starting a closing tag...
           return false;
-				}
+				}.bind(this);
 
-				function tag(node){
+				var tag = function(node){
 	        if (!tagOpen(node)) {
 						return node;
 					}
@@ -487,7 +495,7 @@ Tokenizer.prototype = {
 	          tagClose(node);
 	        }
 					return node;
-				}
+				}.bind(this);
 
         var root = tag({});
 
@@ -715,10 +723,14 @@ Tokenizer.regexNewline = /\n/g;
 Tokenizer.Unidocde = window.Unicode;
 Tokenizer.regexNumber = /^(?:(0[xX][0-9A-Fa-f]+)|((?:(?:(?:(?:[0-9]+)(?:\.[0-9]*)?))|(?:\.[0-9]+))(?:[eE][-+]?[0-9]{1,})?))/;
 Tokenizer.regexNormalizeNewlines = /(\u000D[^\u000A])|[\u2028\u2029]/;
-
-// Tokenizer.regexUnaryTag = /<\s*(\S)(?:\s+)?/>/;
-// /<\s*(\S+)\/>/.exec('< foo/>')
-// /[^\S]+([a-zA-Z0-9-]+)(?:="([^"]*)")?/g.exec(' a-b="b"')
+// tag parsing regex
+Tokenizer.regexTagName = /[^\S]*([a-zA-Z][a-zA-Z0-9-]*)/g;
+Tokenizer.regexTagAttributes = /[^\S]+([a-zA-Z0-9-]+)(?:=(?:(?:"([^"]*?)")|(?:'([^']*?)')))?/g;
+Tokenizer.regexTagUnarySuffix = /[^\S]*\/[^\S]*>/g;
+Tokenizer.regexTagBinarySuffix = /[^\S]*?>/g;
+Tokenizer.regexTagBody = /([^<]*)/g;
+Tokenizer.regexTagOpenOrClose = /<[^\S]*[\/>]*\//g;
+Tokenizer.regexTagClose = /<[^\S]*\/[^\S]*([a-zA-Z0-9-]+)[^\S]*>/g;
 
 
 //                      1 ws                            2 lt                        3 scmt 4 mcmt 5/6 str 7 nr       8 rx         9 dom        10 punc
