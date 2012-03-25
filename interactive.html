@@ -1,0 +1,39 @@
+<!doctype html>
+<html>
+	<head>
+		<title>Parser Test Suite Page</title>
+	</head>
+	<body>
+		(c) qfox.nl<br/>
+		Parser interactive input (just start typing js :)<br/>
+		<div>
+			<textarea id="left" style="width: 47%; height: 500px; margin-right: 4%">var foo = &lt;div class="foo" meh='bar' hidden&gt;&lt;/div&gt;;</textarea>
+			<textarea id="right" style="width: 47%; height: 500px;"></textarea>
+		</div>
+		<script src="unicodecategories.js"></script>
+		<script src="Tokenizer.js"></script>
+		<script src="ZeParser.js"></script>
+		<script>
+var left = document.getElementById('left');
+left.value = localStorage.getItem('input');
+left.focus();
+var parser = null;
+document.getElementById('left').onkeyup = function(){
+	var tree = [];
+	var input = document.getElementById('left').value;
+	localStorage.setItem('input', input);
+	var tokenizer = new Tokenizer(input);
+	parser = new ZeParser(input, tokenizer, tree);
+	parser.parse();
+	parser.tokenizer.fixValues();
+	
+	document.getElementById('right').value = '{'+tokenizer.wtree.map(function(t){ 
+		return Object.keys(t).map(function(key){
+			return key+':'+t[key];
+		}).join(' ');
+	}).join('}\n{')+'}';
+};
+//document.getElementById('left').onkeyup();
+		</script>
+	</body>
+</html>
