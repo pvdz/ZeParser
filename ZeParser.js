@@ -1488,6 +1488,7 @@ ZeParser.prototype = {
 		if (stack.parsedSwitchDefault && match.value == 'default') {
 			this.failignore('SwitchCannotHaveDoubleDefault', match, stack);
 		}
+		delete stack.parsedSwitchDefault;
 
 		if (match.value != '}' && match.name != 14/*error*/) match = this.failsafe('SwitchBodyEndsWithCurly', match);
 
@@ -1622,6 +1623,7 @@ ZeParser.prototype = {
 		if (!stack.tryHasCatchOrFinally) {
 			this.failignore('TryMustHaveCatchOrFinally', match, stack);
 		}
+		delete stack.tryHasCatchOrFinally;
 
 		return match;
 	},

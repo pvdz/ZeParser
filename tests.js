@@ -486,6 +486,9 @@ var Tests = [
 ["/^(?:\\/(?![*\\n\\/])(?:\\[(?:\\\\.|[^\\]\\\\\\n])*\\]|\\\\.|[^\\[\\/\\\\\\n])+\\/[gim]*)$/", [1, 2], [true], "Complex RegExp for Matching RegExps"],
 ["({a:b}[ohi].iets()++);", 16, "Object Literal With 1 Member, Square Bracket Member Accessor, Dot Member Accessor, Function Call, Postfix Increment"],
 
-["switch(x){ default: foo; break; case x: break; default: fail; }", [30, 34], "double default should include error token"]
+["switch(x){ default: foo; break; case x: break; default: fail; }", [30, 34], "double default should include error token"],
+
+["switch(x){ default: foo; break; case x: break; } switch(x){ default: foo; break; case x: break; }", 49, "State Leakage: Sequential Valid `switch` Statements"],
+["try { foo(); } catch (e) {} try { bar(); }", [30, 31], "State Leakage: `try...catch` Block Followed By Invalid `try` Block"]
 
 ];
