@@ -10,8 +10,10 @@ if (typeof exports !== 'undefined') {
 
 /**
  * @param {Object} inp
+ * @param {Object} options
+ * @property {boolean} [options.tagLiterals] Instructs the tokenizer to also parse tag literals
  */
-function Tokenizer(inp){
+function Tokenizer(inp, options){
 	this.inp = inp||'';
 	// replace all other line terminators with \n (leave \r\n in tact though). we should probably remove the shadowInp when finished...
 	// only replace \r if it is not followed by a \n else \r\n would become \n\n causing a double newline where it is just a single
@@ -63,7 +65,7 @@ function Tokenizer(inp){
 	this.errorEscape = null;
 
 	// support tag literals
-	this.tagLiterals = false;
+	this.tagLiterals = false || (options && options.tagLiterals);
 };
 
 Tokenizer.prototype = {

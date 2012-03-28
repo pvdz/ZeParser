@@ -67,13 +67,15 @@ ZeParser.parse = function(input, simple){
 /**
  * Returns a new parser instance with parse details for input
  * @param {string} input
+ * @param {Object} options
+ * @property {boolean} [options.tagLiterals] Instructs the tokenizer to also parse tag literals
  * @returns {ZeParser}
  */
-ZeParser.createParser = function(input){
-	var tok = new Tokenizer(input);
+ZeParser.createParser = function(input, options){
+	var tok = new Tokenizer(input, options);
 	var stack = [];
 	try {
-		var parser = new ZeParser(input, tok, stack);
+		var parser = new ZeParser(input, tok, stack, options);
 		parser.parse();
 		return parser;
 	} catch (e) {
