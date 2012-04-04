@@ -726,13 +726,20 @@ Tokenizer.Unidocde = window.Unicode;
 Tokenizer.regexNumber = /^(?:(0[xX][0-9A-Fa-f]+)|((?:(?:(?:(?:[0-9]+)(?:\.[0-9]*)?))|(?:\.[0-9]+))(?:[eE][-+]?[0-9]{1,})?))/;
 Tokenizer.regexNormalizeNewlines = /(\u000D[^\u000A])|[\u2028\u2029]/;
 // tag parsing regex
+                         // ws   name (must start with non-number-or-dash)
 Tokenizer.regexTagName = /[^\S]*([a-zA-Z][a-zA-Z0-9-]*)/g;
-Tokenizer.regexTagAttributes = /[^\S]+([a-zA-Z0-9-]+)(?:=(?:(?:"([^"]*?)")|(?:'([^']*?)')))?/g;
+                                // ws   attrname             "..[\"].."                           '..[\']..'
+Tokenizer.regexTagAttributes = /[^\S]+([a-zA-Z0-9-]+)(?:=(?:(?:"((?:(?:\\.)|(?:[^"]))*?)")|(?:'((?:(?:\\')|(?:[^']))*?)')))?/g;
+                                // ws  />
 Tokenizer.regexTagUnarySuffix = /[^\S]*\/[^\S]*>/g;
+                                // ws >
 Tokenizer.regexTagBinarySuffix = /[^\S]*?>/g;
-Tokenizer.regexTagBody = /([^<]*)/g;
+                                // anything as long as its not a <, unless preceeded by \
+Tokenizer.regexTagBody = /((?:(?:\\.)|(?:[^<]))*)/g;
+                                // < ws /> / (?? TOFIX not sure whether this is correct or intentional...)
 Tokenizer.regexTagOpenOrClose = /<[^\S]*[\/>]*\//g;
-Tokenizer.regexTagClose = /<[^\S]*\/[^\S]*([a-zA-Z0-9-]+)[^\S]*>/g;
+                                // < ws / ws name ws >
+Tokenizer.regexTagClose = /<[^\S]*\/[^\S]*([a-zA-Z][a-zA-Z0-9-]*)[^\S]*>/g;
 
 
 //                      1 ws                            2 lt                        3 scmt 4 mcmt 5/6 str 7 nr       8 rx         9 dom        10 punc
