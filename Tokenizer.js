@@ -52,6 +52,7 @@ function Tokenizer(inp, options){
   this.regexTagBody = Tokenizer.regexTagBody;
   this.regexTagOpenOrClose = Tokenizer.regexTagOpenOrClose;
   this.regexTagClose = Tokenizer.regexTagClose;
+	this.regexRemoveEscape = Tokenizer.regexRemoveEscape;
 
 	this.tokenCount = 0;
 	this.tokenCountNoWhite = 0;
@@ -415,13 +416,19 @@ Tokenizer.prototype = {
 						node.name = tag[1];
 						node.attributes = {};
 
+            // now fetch all attribute=value pairs
 		        var regexTagAttributes = this.regexTagAttributes;
 						var attr = '';
 						var lastIndex = pos = regexTagAttributes.lastIndex = regexTagName.lastIndex;
 						attr = regexTagAttributes.exec(inp);
 						while (attr && attr.index == pos) {
-							if (typeof attr[2] == 'undefined') node.attributes[attr[1]] = attr[3];
-							else node.attributes[attr[1]] = attr[2];
+							if (typeof attr[2] == 'undefined') {
+								// attribute without value assignment (implicit "true")
+								node.attributes[attr[1]] = attr[3];
+							} else {
+								var val = attr[2].replace(this.regexRemoveEscape, '$1'); // remove a single backslash from the content (it was used as an escape character)
+								node.attributes[attr[1]] = val;
+							}
 							pos = lastIndex = regexTagAttributes.lastIndex;
 							attr = regexTagAttributes.exec(inp);
 						}
@@ -459,7 +466,8 @@ Tokenizer.prototype = {
 						regexTagBody.lastIndex = pos;
 						var text = regexTagBody.exec(inp);
 						if (text && text[1]) {
-							node.children.push(text[1]);
+              var txt = text[1].replace(this.regexRemoveEscape, '$1'); // remove a single backslash from the content (it was used as an escape character)
+							node.children.push(txt);
 							pos = regexTagBody.lastIndex;
 						}
 						if (inp[pos] == '<') {
@@ -740,6 +748,8 @@ Tokenizer.regexTagBody = /((?:(?:\\.)|(?:[^<]))*)/g;
 Tokenizer.regexTagOpenOrClose = /<[^\S]*[\/>]*\//g;
                                 // < ws / ws name ws >
 Tokenizer.regexTagClose = /<[^\S]*\/[^\S]*([a-zA-Z][a-zA-Z0-9-]*)[^\S]*>/g;
+                              // backslash with either a non-backslash following or the EOL following
+Tokenizer.regexRemoveEscape = /\\(?:([^\\])|$)/g;
 
 
 //                      1 ws                            2 lt                        3 scmt 4 mcmt 5/6 str 7 nr       8 rx         9 dom        10 punc
