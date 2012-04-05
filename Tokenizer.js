@@ -407,6 +407,53 @@ Tokenizer.prototype = {
 				}
 				returnValue.twinfo = twinfo;
       } else if (regex && part[9]) { // this.tagLiterals
+				var processValue = function(val){
+          // post process dynamic parts of this value
+          // anything wrapped in (unescaped) { and } is considered to be
+          // a literal js expression. so we should parse an expression here
+          // and that's where the voodoo inception starts. we must now
+          // invoke a new instance of ZeParser, make it read an
+          // expression and ensure the next char is the closing curly.
+          // only then is it deemed valid.
+          
+          // ...
+          // too difficult for now. let's just go with "escape all teh curlies!"
+          
+          var arrtxtjs = []; // uneven array. uneven elements are text, even elements are js 
+          
+          var last = 0;
+          for (var i=0; i<val.length; ++i) {
+            if (val[i] == '\\') ++i;
+            else if (val[i] == '{') {
+              for (var j=i; j<val.length; ++j) {
+                if (val[j] == '\\') ++j;
+                else if (val[j] == '}') {
+                  var js = val.slice(i+1, j);
+                  arrtxtjs.push(
+                    val.slice(last, i),
+                    js
+                  );
+                  break;
+                }
+              }
+              i = j;
+              last = j + 1;
+            }
+          }
+					// remainder (can be empty string)
+          arrtxtjs.push(val.slice(last, i));
+					
+          if (arrtxtjs.length > 1) { // if we did find any dynamic js block...
+            for (var i=0; i<arrtxtjs.length; i+=2) {
+              arrtxtjs[i] = arrtxtjs[i].replace(this.regexRemoveEscape, '$1'); // remove a single backslash from the content (it was used as an escape character)
+            }
+            return arrtxtjs; // return array with [string,js,string,js,...]
+          } else { // no dynamic js found, return a string
+            val = arrtxtjs[0].replace(this.regexRemoveEscape, '$1'); // remove a single backslash from the content (it was used as an escape character)
+            return val;
+          }
+				};
+				
 				var tagOpen = function(node){
 					var regexTagName = this.regexTagName;
 					regexTagName.lastIndex = pos+1;
@@ -426,8 +473,7 @@ Tokenizer.prototype = {
 								// attribute without value assignment (implicit "true")
 								node.attributes[attr[1]] = attr[3];
 							} else {
-								var val = attr[2].replace(this.regexRemoveEscape, '$1'); // remove a single backslash from the content (it was used as an escape character)
-								node.attributes[attr[1]] = val;
+                node.attributes[attr[1]] = processValue(attr[2]);
 							}
 							pos = lastIndex = regexTagAttributes.lastIndex;
 							attr = regexTagAttributes.exec(inp);
@@ -466,7 +512,8 @@ Tokenizer.prototype = {
 						regexTagBody.lastIndex = pos;
 						var text = regexTagBody.exec(inp);
 						if (text && text[1]) {
-              var txt = text[1].replace(this.regexRemoveEscape, '$1'); // remove a single backslash from the content (it was used as an escape character)
+							var txt = processValue(text[1]);
+//              var txt = text[1].replace(this.regexRemoveEscape, '$1'); // remove a single backslash from the content (it was used as an escape character)
 							node.children.push(txt);
 							pos = regexTagBody.lastIndex;
 						}
