@@ -406,158 +406,183 @@ Tokenizer.prototype = {
 					}
 				}
 				returnValue.twinfo = twinfo;
-      } else if (regex && part[9]) { // this.tagLiterals
-				var processValue = function(val){
-          // post process dynamic parts of this value
-          // anything wrapped in (unescaped) { and } is considered to be
-          // a literal js expression. so we should parse an expression here
-          // and that's where the voodoo inception starts. we must now
-          // invoke a new instance of ZeParser, make it read an
-          // expression and ensure the next char is the closing curly.
-          // only then is it deemed valid.
-          
-          // ...
-          // too difficult for now. let's just go with "escape all teh curlies!"
-          
-          var arrtxtjs = []; // uneven array. uneven elements are text, even elements are js 
-          
-          var last = 0;
-          for (var i=0; i<val.length; ++i) {
-            if (val[i] == '\\') ++i;
-            else if (val[i] == '{') {
-              for (var j=i; j<val.length; ++j) {
-                if (val[j] == '\\') ++j;
-                else if (val[j] == '}') {
-                  var js = val.slice(i+1, j);
-                  arrtxtjs.push(
-                    val.slice(last, i),
-                    js
-                  );
-                  break;
-                }
-              }
-              i = j;
-              last = j + 1;
-            }
-          }
-					// remainder (can be empty string)
-          arrtxtjs.push(val.slice(last, i));
-					
-          if (arrtxtjs.length > 1) { // if we did find any dynamic js block...
-            for (var i=0; i<arrtxtjs.length; i+=2) {
-              arrtxtjs[i] = arrtxtjs[i].replace(this.regexRemoveEscape, '$1'); // remove a single backslash from the content (it was used as an escape character)
-            }
-            return arrtxtjs; // return array with [string,js,string,js,...]
-          } else { // no dynamic js found, return a string
-            val = arrtxtjs[0].replace(this.regexRemoveEscape, '$1'); // remove a single backslash from the content (it was used as an escape character)
-            return val;
-          }
-				};
-				
-				var tagOpen = function(node){
-					var regexTagName = this.regexTagName;
-					regexTagName.lastIndex = pos+1;
-					var tag = regexTagName.exec(inp);
-					if (tag) {
-						pos = regexTagName.lastIndex;
-						node.name = tag[1];
-						node.attributes = {};
+            } else if (regex && part[9]) { // this.tagLiterals
+                // allows you to use this literally (in places where an expression is allowed) in js:
 
-            // now fetch all attribute=value pairs
-		        var regexTagAttributes = this.regexTagAttributes;
-						var attr = '';
-						var lastIndex = pos = regexTagAttributes.lastIndex = regexTagName.lastIndex;
-						attr = regexTagAttributes.exec(inp);
-						while (attr && attr.index == pos) {
-							if (typeof attr[2] == 'undefined') {
-								// attribute without value assignment (implicit "true")
-								node.attributes[attr[1]] = attr[3];
-							} else {
-                node.attributes[attr[1]] = processValue(attr[2]);
-							}
-							pos = lastIndex = regexTagAttributes.lastIndex;
-							attr = regexTagAttributes.exec(inp);
-						}
+                // simple tag:
+                // <div></div>
 
-						// it was a unary tag
-						var regexTagUnarySuffix = this.regexTagUnarySuffix;
-						regexTagUnarySuffix.lastIndex = lastIndex;
-						var x = regexTagUnarySuffix.exec(inp);
-	          node.unary = !!x && x.index == pos;
-						if (node.unary) {
-							pos = regexTagUnarySuffix.lastIndex;
-							return true;
-						}
-						// it was a binary tag
-						var regexTagBinarySuffix = this.regexTagBinarySuffix;
-						regexTagBinarySuffix.lastIndex = lastIndex;
-						var x = regexTagBinarySuffix.exec(inp);
-						if (x && x.index == pos) {
-	            node.children = [];
-	            // now parse strings and other tags until you find a closing tag on the same level...
-							pos = regexTagBinarySuffix.lastIndex;
-              return true;
-						}
-            // i dont know what that was
-						throw console.warn("Error parsing tag");
-						return false;
-					}
-				}.bind(this);
+                // tree, unary, content, multiline:
+                // <foo> <bar>hello </bar> <baz/>
+                // </foo>
 
-        var tagBody = function(node){
-					do {
-            var start = pos;
+                // attributes, default true attributes, single and double quotes:
+                // <gah this="an" attribute single='quote'/>
 
-	          var regexTagBody = this.regexTagBody;
-						regexTagBody.lastIndex = pos;
-						var text = regexTagBody.exec(inp);
-						if (text && text[1]) {
-							var txt = processValue(text[1]);
+                // dynamic content (content normally parsed as js in a sub-parser):
+                // <div>{["hello","world"].join(' ')}</div>
+
+                // escaping content with single backslash
+                // <div>hah\&lt;\<a{"foo\u0500t\t"+"bar"}</div>
+
+                // note: tag content is escaped (one slash removed), js content is not
+                // currently not really possible to use } or > in js code unless you
+                // can somehow prefix them with a backslash (strings, regex)
+                // if you must have these otherwise the fallback is eval
+
+                var processValue = function(val){
+                    // post process dynamic parts of this value
+                    // anything wrapped in (unescaped) { and } is considered to be
+                    // a literal js expression. so we should parse an expression here
+                    // and that's where the voodoo inception starts. we must now
+                    // invoke a new instance of ZeParser, make it read an
+                    // expression and ensure the next char is the closing curly.
+                    // only then is it deemed valid.
+
+                    // ...
+                    // too difficult for now. let's just go with "escape all teh curlies!"
+
+                    var arrtxtjs = []; // uneven array. uneven elements are text, even elements are js
+
+                    var last = 0;
+                    for (var i=0; i<val.length; ++i) {
+                        if (val[i] == '\\') ++i;
+                        else if (val[i] == '{') {
+                            for (var j=i; j<val.length; ++j) {
+                                if (val[j] == '\\') ++j;
+                                else if (val[j] == '}') {
+                                    var js = val.slice(i+1, j);
+                                    arrtxtjs.push(
+                                        val.slice(last, i),
+                                        js
+                                    );
+                                    break;
+                                }
+                            }
+                            i = j;
+                            last = j + 1;
+                        }
+                    }
+                    // remainder (can be empty string)
+                    arrtxtjs.push(val.slice(last, i));
+
+                    if (arrtxtjs.length > 1) { // if we did find any dynamic js block...
+                        console.log(["has",arrtxtjs.length,"items",arrtxtjs])
+                        for (var i=1; i<arrtxtjs.length; i+=2) {
+                            arrtxtjs[i] = arrtxtjs[i].replace(this.regexRemoveEscape, '$1'); // remove a single backslash from the content (it was used as an escape character)
+                        }
+                        console.log([arrtxtjs])
+                        return arrtxtjs; // return array with [string,js,string,js,...]
+                    } else { // no dynamic js found, return a string
+                        val = arrtxtjs[0].replace(this.regexRemoveEscape, '$1'); // remove a single backslash from the content (it was used as an escape character)
+                        return val;
+                    }
+                };
+
+                var tagOpen = function(node){
+                    var regexTagName = this.regexTagName;
+                    regexTagName.lastIndex = pos+1;
+                    var tag = regexTagName.exec(inp);
+                    if (tag) {
+                        pos = regexTagName.lastIndex;
+                        node.name = tag[1];
+                        node.attributes = {};
+
+                        // now fetch all attribute=value pairs
+                        var regexTagAttributes = this.regexTagAttributes;
+                        var attr = '';
+                        var lastIndex = pos = regexTagAttributes.lastIndex = regexTagName.lastIndex;
+                        attr = regexTagAttributes.exec(inp);
+                        while (attr && attr.index == pos) {
+                            if (typeof attr[2] == 'undefined') {
+                                // attribute without value assignment (implicit "true")
+                                node.attributes[attr[1]] = attr[3];
+                            } else {
+                                node.attributes[attr[1]] = processValue.call(this, attr[2]);
+                            }
+                            pos = lastIndex = regexTagAttributes.lastIndex;
+                            attr = regexTagAttributes.exec(inp);
+                        }
+
+                        // it was a unary tag
+                        var regexTagUnarySuffix = this.regexTagUnarySuffix;
+                        regexTagUnarySuffix.lastIndex = lastIndex;
+                        var x = regexTagUnarySuffix.exec(inp);
+                        node.unary = !!x && x.index == pos;
+                        if (node.unary) {
+                            pos = regexTagUnarySuffix.lastIndex;
+                            return true;
+                        }
+                        // it was a binary tag
+                        var regexTagBinarySuffix = this.regexTagBinarySuffix;
+                        regexTagBinarySuffix.lastIndex = lastIndex;
+                        var x = regexTagBinarySuffix.exec(inp);
+                        if (x && x.index == pos) {
+                            node.children = [];
+                            // now parse strings and other tags until you find a closing tag on the same level...
+                            pos = regexTagBinarySuffix.lastIndex;
+                            return true;
+                        }
+                        // i dont know what that was
+                        throw console.warn("Error parsing tag");
+                        return false;
+                    }
+                }.bind(this);
+
+                var tagBody = function(node){
+                    do {
+                        var start = pos;
+
+                        var regexTagBody = this.regexTagBody;
+                        regexTagBody.lastIndex = pos;
+                        var text = regexTagBody.exec(inp);
+                        if (text && text[1]) {
+                            var txt = processValue(text[1]);
 //              var txt = text[1].replace(this.regexRemoveEscape, '$1'); // remove a single backslash from the content (it was used as an escape character)
-							node.children.push(txt);
-							pos = regexTagBody.lastIndex;
-						}
-						if (inp[pos] == '<') {
-							var regexTagOpenOrClose = this.regexTagOpenOrClose;
-							regexTagOpenOrClose.lastIndex = pos;
-							var x = regexTagOpenOrClose.exec(inp);
-							if (x && x.index == pos) {
-								return node; // end of body
-							}
-							node.children.push(tag({}));
-						}
-					} while (start != pos);
-        }.bind(this);
+                            node.children.push(txt);
+                            pos = regexTagBody.lastIndex;
+                        }
+                        if (inp[pos] == '<') {
+                            var regexTagOpenOrClose = this.regexTagOpenOrClose;
+                            regexTagOpenOrClose.lastIndex = pos;
+                            var x = regexTagOpenOrClose.exec(inp);
+                            if (x && x.index == pos) {
+                                return node; // end of body
+                            }
+                            node.children.push(tag({}));
+                        }
+                    } while (start != pos);
+                }.bind(this);
 
-				var tagClose = function(node){
-					var regexTagClose = this.regexTagClose;
-					regexTagClose.lastIndex = pos;
-					var ctag = regexTagClose.exec(inp);
-					if (ctag) {
-						pos = regexTagClose.lastIndex;
-						if (node.name == ctag[1]) return true;
-						return false; // was not expecting to close this tag
-					}
+                var tagClose = function(node){
+                    var regexTagClose = this.regexTagClose;
+                    regexTagClose.lastIndex = pos;
+                    var ctag = regexTagClose.exec(inp);
+                    if (ctag) {
+                        pos = regexTagClose.lastIndex;
+                        if (node.name == ctag[1]) return true;
+                        return false; // was not expecting to close this tag
+                    }
 
-          // tagClose should only be called if the next chars are starting a closing tag...
-          return false;
-				}.bind(this);
+                    // tagClose should only be called if the next chars are starting a closing tag...
+                    return false;
+                }.bind(this);
 
-				var tag = function(node){
-	        if (!tagOpen(node)) {
-						return node;
-					}
-	        if (!node.unary) {
-	          tagBody(node);
-	          tagClose(node);
-	        }
-					return node;
-				}.bind(this);
+                var tag = function(node){
+                    if (!tagOpen(node)) {
+                        return node;
+                    }
+                    if (!node.unary) {
+                        tagBody(node);
+                        tagClose(node);
+                    }
+                    return node;
+                }.bind(this);
 
-        var root = tag({});
+                var root = tag({});
 
-				returnValue = {start:start,stop:pos,name:15/*TAG*/,isPrimitive:true,root:root};
-			} else {
+                returnValue = {start:start,stop:pos,name:15/*TAG*/,isPrimitive:true,root:root};
+            } else {
 				// note: operators need to be ordered from longest to smallest. regex will take care of the rest.
 				// no need to worry about div vs regex. if looking for regex, earlier if will have eaten it
 				//var result = this.regexPunctuators.exec(inp.substring(pos,pos+4));
