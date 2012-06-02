@@ -93,6 +93,8 @@ ZeParser.prototype = {
 
 	ast: null,
 
+    queryMethodExtension: false,
+
 	parse: function(match){
 		if (match) match = this.tokenizer.storeCurrentAndFetchNextToken(false, match, this.stack); // meh
 		else match = this.tokenizer.storeCurrentAndFetchNextToken(false, null, this.stack, true); // initialization step, dont store the match (there isnt any!)
@@ -240,7 +242,7 @@ ZeParser.prototype = {
 					if (!(/*is left hand side start?*/ match.name <= 6 || match.name == 15/*TAG*/ || this.regexLhsStart.test(match.value))) match = this.failsafe('ExpectedAnotherExpressionRhs', match);
 					// not allowed to parse assignment
 					parsedUnaryOperator = true;
-				};
+				}
 
 				// if we parsed any kind of unary operator, we cannot be parsing a labeled statement
 				if (parsedUnaryOperator) mayParseLabeledStatementInstead = false;
@@ -548,7 +550,8 @@ ZeParser.prototype = {
 						stack = oldstack;
 						this.scope = oldscope;
 					} //#endif
-				} else if (match.name <= 6 || match.name == 15/*TAG*/) { // IDENTIFIER STRING_SINGLE STRING_DOUBLE NUMERIC_HEX NUMERIC_DEC REG_EX or TAG
+                // this is the core (sub-)expression part:
+				} else if (match.name <= 6 || match.name == 15/*TAG*/) { // IDENTIFIER STRING_SINGLE STRING_DOUBLE NUMERIC_HEX NUMERIC_DEC REG_EX or (custom extension) TAG
 					// save it in case it turns out to be a label.
 					var possibleLabel = match;
 
@@ -577,7 +580,9 @@ ZeParser.prototype = {
 
 						// only accept assignments after a member expression (identifier or ending with a [] suffix)
 						acceptAssignment = true;
-					} else if (isBreakOrContinueArg) match = this.failsafe('BreakOrContinueArgMustBeJustIdentifier', match);
+					} else if (isBreakOrContinueArg) {
+                        match = this.failsafe('BreakOrContinueArgMustBeJustIdentifier', match);
+                    }
 
 					// the current match is the lead value being queried. tag it that way
 					if (this.ast) { //#ifdef FULL_AST
@@ -656,8 +661,8 @@ ZeParser.prototype = {
 					match = this.tokenizer.storeCurrentAndFetchNextToken(false, match, stack);
 				}
 
-				// search for "value" suffix. property access and call parens.
-				while (match.value == '.' || match.value == '[' || match.value == '(') {
+				// search for "value" suffix. property access and call parens. (and query methods: {)
+				while (match.value == '.' || match.value == '[' || match.value == '(' || (this.queryMethodExtension && match.value == '{')) {
 					if (isBreakOrContinueArg) match = this.failsafe('BreakOrContinueArgMustBeJustIdentifier', match);
 
 					if (match.value == '.') {
@@ -719,7 +724,18 @@ ZeParser.prototype = {
 						} //#endif
 						match = this.tokenizer.storeCurrentAndFetchNextToken(true, match, stack); // might be div
 						acceptAssignment = false;
-					}
+					} else if (match.value == '{') {
+                        if (!this.queryMethodExtension) {
+                            console.warn("This should never happen. The `foo{.bar}` syntax is only parsed under a flag that's set to false... wtf?");
+                        }
+
+                        // this transforms the given match inline. so the match stays the same, it just
+                        // has a new name and covers more input after this method finishes ;)
+                        this.tokenizer.parseCurlyMethodLiteral(match);
+                        match = this.tokenizer.storeCurrentAndFetchNextToken(true, match, stack); // might be div
+                    } else {
+                        throw "Coding error, should never happen";
+                    }
 				}
 
 				// check for postfix operators ++ and --
@@ -810,8 +826,8 @@ ZeParser.prototype = {
 					}
 				} while (ternary); // if we just parsed a ternary expression, we need to check _again_ whether the next token is a binary operator.
 
-				// start over. match is the rhs for the lhs we just parsed, but lhs for the next expression
-				if (parseAnotherExpression && !(/*is left hand side start?*/ match.name <= 6 || match.name == 15/*TAG*/ || this.regexLhsStart.test(match.value))) {
+                // start over. match is the rhs for the lhs we just parsed, but lhs for the next expression
+                if (parseAnotherExpression && !(/*is left hand side start?*/ match.name <= 6 || match.name == 15/*TAG*/ || this.regexLhsStart.test(match.value))) {
 					// no idea what to do now. lets just ignore and see where it ends. TOFIX: maybe just break the loop or return?
 					this.failignore('InvalidRhsExpression', match, stack);
 				}
@@ -2183,5 +2199,5 @@ ZeParser.Errors = {
 	CaseMissingExpression: {msg:'Case expects an expression before the colon'},
 	TryMustHaveCatchOrFinally: {msg:'The try statement must have a catch or finally block'},
 	UnexpectedInputSwitch: {msg:'Unexpected input while parsing a switch clause...'},
-	ForInCanOnlyDeclareOnVar: {msg:'For-in header can only introduce one new variable'}
+	ForInCanOnlyDeclareOnVar: {msg:'For-in header can only introduce one new variable'},
 };

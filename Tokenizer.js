@@ -70,6 +70,24 @@ function Tokenizer(inp, options){
 };
 
 Tokenizer.prototype = {
+    // token constants... (should use these some day)
+    REGEX: 1,
+    IDENTIFIER: 2,
+    NUMERIC_HEX: 3,
+    NUMERIC_DEC: 4,
+    STRING_SINGLE: 5,
+    STRING_DOUBLE: 6,
+    COMMENT_SINGLE: 7,
+    COMMENT_MULTI: 8,
+    WHITE_SPACE: 9,
+    LINETERMINATOR: 10,
+    PUNCTUATOR: 11,
+    EOF: 12,
+    ASI: 13,
+    ERROR: 14,
+    TAG: 15,
+    CURLY_METHOD: 16,
+
 	inp:null,
 	shadowInp:null,
 	pos:null,
@@ -96,6 +114,8 @@ Tokenizer.prototype = {
 	tokenCountNoWhite:null,
 
 	Unicode:null,
+
+    tagLiterals: false, // custom tag literal support. allows <div></div> kind of (sub-expression) tokens
 
 	// storeCurrentAndFetchNextToken(bool, false, false true) to get just one token
 	storeCurrentAndFetchNextToken: function(noRegex, returnValue, stack, _dontStore){
@@ -647,8 +667,8 @@ Tokenizer.prototype = {
 			}
 
 			if (returnValue) {
-				// note that ASI's are slipstreamed in here from the parser since the tokenizer cant determine that
-				// if this part ever changes, make sure you change that too :)
+				// note that ASI's and errors are slipstreamed in here from the parser since the tokenizer cant determine that
+				// if this part ever changes, make sure you change that too :) (see also this.addTokenToStreamBefore)
 				returnValue.tokposw = this.wtree.length;
 				this.wtree.push(returnValue);
 				if (!returnValue.isWhite) {
@@ -658,7 +678,7 @@ Tokenizer.prototype = {
 			}
 
 
-		} while (stack && returnValue && returnValue.isWhite); // WHITE_SPACE LINETERMINATOR COMMENT_SINGLE COMMENT_MULTI
+		} while (returnValue && returnValue.isWhite); // WHITE_SPACE LINETERMINATOR COMMENT_SINGLE COMMENT_MULTI
 		++this.tokenCountNoWhite;
 
 		this.pos = pos;
@@ -666,6 +686,7 @@ Tokenizer.prototype = {
 		if (matchedNewline) returnValue.newline = true;
 		return returnValue;
 	},
+    // used by ASI and error stuff (in parser)
 	addTokenToStreamBefore: function(token, match){
 		var wtree = this.wtree;
 		var btree = this.btree;
@@ -688,6 +709,89 @@ Tokenizer.prototype = {
 			}
 		}
 	},
+    // (unused) replaces the range of tokens in the
+    // white and black streams with the specified token.
+    replaceTokensInStreamWithToken: function(token, wfrom, wto, bfrom, bto){
+        this.wtree.splice(wfrom, wto-wfrom, token);
+        this.btree.splice(bfrom, bto-bfrom, token);
+    },
+    parseCurlyMethodLiteral: function(match){
+        var error = false;
+        var pos = this.pos;
+        // match should be an opening curly with no preceeding newline
+        if (match.hasNewline) {
+            // so this is bad because if we would not demand this, the language could
+            // be amibiguous with a block
+            error = 'CurlyMethodsMayNotFollowNewline';
+        } else {
+            var input = this.inp;
+
+            // remember number of curlies, you'll want that many closers as well
+            var curlies = 1;
+            while (input[pos] == '{') {
+                ++pos;
+                ++curlies;
+            }
+
+            // keep parsing characters until you reach a curly.
+            // backslashes may only escape backslashes or curlies
+            while (!error && pos < input.length && input[pos] != '}') {
+                if (input[pos] == '{') {
+                    error = CurlyMethodsCannotContainOpeningCurly;
+                } else if (input[pos] == '\\') {
+                    if (input[pos+1] != '{' && input[pos+1] != '}' && input[pos+1] != '\\') {
+                        error = 'CurlyMethodsMayOnlyEscapeCurlies';
+                    } else {
+                        // skip curly or backslash
+                        ++pos;
+                    }
+                }
+                ++pos;
+            }
+
+            if (!error) {
+                if (pos >= input.length) {
+                    error = 'CurlyMethodsUnexpectedEof';
+                } else {
+                    var n = curlies;
+                    while (n && pos<input.length) {
+                        if (input[pos] == '}') {
+                            ++pos;
+                            --n;
+                        } else {
+                            break;
+                        }
+                    }
+//                    while (n-- && pos<=input.length && input[pos++] == '}') console.log('yes');
+
+                    if (pos>input.length) error = 'CurlyMethodsUnexpectedEof';
+                    else if (n) error = 'CurlyMethodsWasOpenedWithMoreCurliesThanClosed';
+                }
+            }
+            if (!error) {
+                // transform this match to a CURLY_METHOD instead of the opening curly it was
+                match.name = this.CURLY_METHOD;
+                match.stop = pos;
+                match.value = this.inp.slice(match.start,pos);
+                match.curlies = curlies;
+
+                this.pos = pos;
+            }
+        }
+
+        if (error) {
+            this.addTokenToStreamBefore(
+                {
+                    start: match.start,
+                    stop:  pos,
+                    name:  this.ERROR,
+                    tokenError:true,
+                    error: Tokenizer.Error.NumberExponentRequiresDigits
+                },
+                match
+            );
+        }
+    },
 	oldNumberParser: function(pos, chr, inp, returnValue, start, Tokenizer){
 		++pos;
 		// either: 0x 0X 0 .3
@@ -851,5 +955,10 @@ Tokenizer.Error = {
 	DollarShouldBeEnd: {msg: 'The $ signifies the stop of match but was not found at a stop'},
 	QuantifierRequiresNumber: {msg:'Quantifier curly requires at least one digit before the comma'},
 	QuantifierRequiresClosingCurly: {msg:'Quantifier curly requires to be closed'},
-	MissingOpeningCurly: {msg:'Encountered closing quantifier curly without seeing an opening curly'}
+	MissingOpeningCurly: {msg:'Encountered closing quantifier curly without seeing an opening curly'},
+    CurlyMethodsMayNotFollowNewline: {msg:'There may not be any newlines between the expression and the curly method'},
+    CurlyMethodsMayOnlyEscapeCurlies: {msg:'You may only escape curlies {} and backslashes in curly methods'},
+    CurlyMethodsCannotContainOpeningCurly: {msg:'There\'s no way an opening curly could be part of a curly method, yet'},
+    CurlyMethodsWasOpenedWithMoreCurliesThanClosed: {msg:'The curly method must be closed with as many curlies as it was started with'},
+    CurlyMethodsUnexpectedEof: {msg:'Encountered EOF while parsing a curly method'},
 };
