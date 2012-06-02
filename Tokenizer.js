@@ -70,23 +70,23 @@ function Tokenizer(inp, options){
 };
 
 Tokenizer.prototype = {
-    // token constants... (should use these some day)
-    REGEX: 1,
-    IDENTIFIER: 2,
-    NUMERIC_HEX: 3,
-    NUMERIC_DEC: 4,
-    STRING_SINGLE: 5,
-    STRING_DOUBLE: 6,
-    COMMENT_SINGLE: 7,
-    COMMENT_MULTI: 8,
-    WHITE_SPACE: 9,
-    LINETERMINATOR: 10,
-    PUNCTUATOR: 11,
-    EOF: 12,
-    ASI: 13,
-    ERROR: 14,
-    TAG: 15,
-    CURLY_METHOD: 16,
+	// token constants... (should use these some day)
+	REGEX: 1,
+	IDENTIFIER: 2,
+	NUMERIC_HEX: 3,
+	NUMERIC_DEC: 4,
+	STRING_SINGLE: 5,
+	STRING_DOUBLE: 6,
+	COMMENT_SINGLE: 7,
+	COMMENT_MULTI: 8,
+	WHITE_SPACE: 9,
+	LINETERMINATOR: 10,
+	PUNCTUATOR: 11,
+	EOF: 12,
+	ASI: 13,
+	ERROR: 14,
+	TAG: 15,
+	CURLY_METHOD: 16,
 
 	inp:null,
 	shadowInp:null,
@@ -115,7 +115,7 @@ Tokenizer.prototype = {
 
 	Unicode:null,
 
-    tagLiterals: false, // custom tag literal support. allows <div></div> kind of (sub-expression) tokens
+	tagLiterals: false, // custom tag literal support. allows <div></div> kind of (sub-expression) tokens
 
 	// storeCurrentAndFetchNextToken(bool, false, false true) to get just one token
 	storeCurrentAndFetchNextToken: function(noRegex, returnValue, stack, _dontStore){
@@ -146,7 +146,7 @@ Tokenizer.prototype = {
 			var start = pos;
 			var chr = inp[pos];
 
-			//							1 ws							2 lt				   3 scmt 4 mcmt 5/6 str 7 nr     8 rx  9 punc
+			//							1 ws							2 lt				   3 scmt 4 mcmt 5/6 str 7 nr	 8 rx  9 punc
 			//if (true) {
 				// substring method (I think this is faster..)
 				var part2 = inp.substring(pos,pos+4);
@@ -426,183 +426,183 @@ Tokenizer.prototype = {
 					}
 				}
 				returnValue.twinfo = twinfo;
-            } else if (regex && part[9]) { // this.tagLiterals
-                // allows you to use this literally (in places where an expression is allowed) in js:
+			} else if (regex && part[9]) { // this.tagLiterals
+				// allows you to use this literally (in places where an expression is allowed) in js:
 
-                // simple tag:
-                // <div></div>
+				// simple tag:
+				// <div></div>
 
-                // tree, unary, content, multiline:
-                // <foo> <bar>hello </bar> <baz/>
-                // </foo>
+				// tree, unary, content, multiline:
+				// <foo> <bar>hello </bar> <baz/>
+				// </foo>
 
-                // attributes, default true attributes, single and double quotes:
-                // <gah this="an" attribute single='quote'/>
+				// attributes, default true attributes, single and double quotes:
+				// <gah this="an" attribute single='quote'/>
 
-                // dynamic content (content normally parsed as js in a sub-parser):
-                // <div>{["hello","world"].join(' ')}</div>
+				// dynamic content (content normally parsed as js in a sub-parser):
+				// <div>{["hello","world"].join(' ')}</div>
 
-                // escaping content with single backslash
-                // <div>hah\&lt;\<a{"foo\u0500t\t"+"bar"}</div>
+				// escaping content with single backslash
+				// <div>hah\&lt;\<a{"foo\u0500t\t"+"bar"}</div>
 
-                // note: tag content is escaped (one slash removed), js content is not
-                // currently not really possible to use } or > in js code unless you
-                // can somehow prefix them with a backslash (strings, regex)
-                // if you must have these otherwise the fallback is eval
+				// note: tag content is escaped (one slash removed), js content is not
+				// currently not really possible to use } or > in js code unless you
+				// can somehow prefix them with a backslash (strings, regex)
+				// if you must have these otherwise the fallback is eval
 
-                var processValue = function(val){
-                    // post process dynamic parts of this value
-                    // anything wrapped in (unescaped) { and } is considered to be
-                    // a literal js expression. so we should parse an expression here
-                    // and that's where the voodoo inception starts. we must now
-                    // invoke a new instance of ZeParser, make it read an
-                    // expression and ensure the next char is the closing curly.
-                    // only then is it deemed valid.
+				var processValue = function(val){
+					// post process dynamic parts of this value
+					// anything wrapped in (unescaped) { and } is considered to be
+					// a literal js expression. so we should parse an expression here
+					// and that's where the voodoo inception starts. we must now
+					// invoke a new instance of ZeParser, make it read an
+					// expression and ensure the next char is the closing curly.
+					// only then is it deemed valid.
 
-                    // ...
-                    // too difficult for now. let's just go with "escape all teh curlies!"
+					// ...
+					// too difficult for now. let's just go with "escape all teh curlies!"
 
-                    var arrtxtjs = []; // uneven array. uneven elements are text, even elements are js
+					var arrtxtjs = []; // uneven array. uneven elements are text, even elements are js
 
-                    var last = 0;
-                    for (var i=0; i<val.length; ++i) {
-                        if (val[i] == '\\') ++i;
-                        else if (val[i] == '{') {
-                            for (var j=i; j<val.length; ++j) {
-                                if (val[j] == '\\') ++j;
-                                else if (val[j] == '}') {
-                                    var js = val.slice(i+1, j);
-                                    arrtxtjs.push(
-                                        val.slice(last, i),
-                                        js
-                                    );
-                                    break;
-                                }
-                            }
-                            i = j;
-                            last = j + 1;
-                        }
-                    }
-                    // remainder (can be empty string)
-                    arrtxtjs.push(val.slice(last, i));
+					var last = 0;
+					for (var i=0; i<val.length; ++i) {
+						if (val[i] == '\\') ++i;
+						else if (val[i] == '{') {
+							for (var j=i; j<val.length; ++j) {
+								if (val[j] == '\\') ++j;
+								else if (val[j] == '}') {
+									var js = val.slice(i+1, j);
+									arrtxtjs.push(
+										val.slice(last, i),
+										js
+									);
+									break;
+								}
+							}
+							i = j;
+							last = j + 1;
+						}
+					}
+					// remainder (can be empty string)
+					arrtxtjs.push(val.slice(last, i));
 
-                    if (arrtxtjs.length > 1) { // if we did find any dynamic js block...
-                        console.log(["has",arrtxtjs.length,"items",arrtxtjs])
-                        for (var i=1; i<arrtxtjs.length; i+=2) {
-                            arrtxtjs[i] = arrtxtjs[i].replace(this.regexRemoveEscape, '$1'); // remove a single backslash from the content (it was used as an escape character)
-                        }
-                        console.log([arrtxtjs])
-                        return arrtxtjs; // return array with [string,js,string,js,...]
-                    } else { // no dynamic js found, return a string
-                        val = arrtxtjs[0].replace(this.regexRemoveEscape, '$1'); // remove a single backslash from the content (it was used as an escape character)
-                        return val;
-                    }
-                };
+					if (arrtxtjs.length > 1) { // if we did find any dynamic js block...
+						console.log(["has",arrtxtjs.length,"items",arrtxtjs])
+						for (var i=1; i<arrtxtjs.length; i+=2) {
+							arrtxtjs[i] = arrtxtjs[i].replace(this.regexRemoveEscape, '$1'); // remove a single backslash from the content (it was used as an escape character)
+						}
+						console.log([arrtxtjs])
+						return arrtxtjs; // return array with [string,js,string,js,...]
+					} else { // no dynamic js found, return a string
+						val = arrtxtjs[0].replace(this.regexRemoveEscape, '$1'); // remove a single backslash from the content (it was used as an escape character)
+						return val;
+					}
+				};
 
-                var tagOpen = function(node){
-                    var regexTagName = this.regexTagName;
-                    regexTagName.lastIndex = pos+1;
-                    var tag = regexTagName.exec(inp);
-                    if (tag) {
-                        pos = regexTagName.lastIndex;
-                        node.name = tag[1];
-                        node.attributes = {};
+				var tagOpen = function(node){
+					var regexTagName = this.regexTagName;
+					regexTagName.lastIndex = pos+1;
+					var tag = regexTagName.exec(inp);
+					if (tag) {
+						pos = regexTagName.lastIndex;
+						node.name = tag[1];
+						node.attributes = {};
 
-                        // now fetch all attribute=value pairs
-                        var regexTagAttributes = this.regexTagAttributes;
-                        var attr = '';
-                        var lastIndex = pos = regexTagAttributes.lastIndex = regexTagName.lastIndex;
-                        attr = regexTagAttributes.exec(inp);
-                        while (attr && attr.index == pos) {
-                            if (typeof attr[2] == 'undefined') {
-                                // attribute without value assignment (implicit "true")
-                                node.attributes[attr[1]] = attr[3];
-                            } else {
-                                node.attributes[attr[1]] = processValue.call(this, attr[2]);
-                            }
-                            pos = lastIndex = regexTagAttributes.lastIndex;
-                            attr = regexTagAttributes.exec(inp);
-                        }
+						// now fetch all attribute=value pairs
+						var regexTagAttributes = this.regexTagAttributes;
+						var attr = '';
+						var lastIndex = pos = regexTagAttributes.lastIndex = regexTagName.lastIndex;
+						attr = regexTagAttributes.exec(inp);
+						while (attr && attr.index == pos) {
+							if (typeof attr[2] == 'undefined') {
+								// attribute without value assignment (implicit "true")
+								node.attributes[attr[1]] = attr[3];
+							} else {
+								node.attributes[attr[1]] = processValue.call(this, attr[2]);
+							}
+							pos = lastIndex = regexTagAttributes.lastIndex;
+							attr = regexTagAttributes.exec(inp);
+						}
 
-                        // it was a unary tag
-                        var regexTagUnarySuffix = this.regexTagUnarySuffix;
-                        regexTagUnarySuffix.lastIndex = lastIndex;
-                        var x = regexTagUnarySuffix.exec(inp);
-                        node.unary = !!x && x.index == pos;
-                        if (node.unary) {
-                            pos = regexTagUnarySuffix.lastIndex;
-                            return true;
-                        }
-                        // it was a binary tag
-                        var regexTagBinarySuffix = this.regexTagBinarySuffix;
-                        regexTagBinarySuffix.lastIndex = lastIndex;
-                        var x = regexTagBinarySuffix.exec(inp);
-                        if (x && x.index == pos) {
-                            node.children = [];
-                            // now parse strings and other tags until you find a closing tag on the same level...
-                            pos = regexTagBinarySuffix.lastIndex;
-                            return true;
-                        }
-                        // i dont know what that was
-                        throw console.warn("Error parsing tag");
-                        return false;
-                    }
-                }.bind(this);
+						// it was a unary tag
+						var regexTagUnarySuffix = this.regexTagUnarySuffix;
+						regexTagUnarySuffix.lastIndex = lastIndex;
+						var x = regexTagUnarySuffix.exec(inp);
+						node.unary = !!x && x.index == pos;
+						if (node.unary) {
+							pos = regexTagUnarySuffix.lastIndex;
+							return true;
+						}
+						// it was a binary tag
+						var regexTagBinarySuffix = this.regexTagBinarySuffix;
+						regexTagBinarySuffix.lastIndex = lastIndex;
+						var x = regexTagBinarySuffix.exec(inp);
+						if (x && x.index == pos) {
+							node.children = [];
+							// now parse strings and other tags until you find a closing tag on the same level...
+							pos = regexTagBinarySuffix.lastIndex;
+							return true;
+						}
+						// i dont know what that was
+						throw console.warn("Error parsing tag");
+						return false;
+					}
+				}.bind(this);
 
-                var tagBody = function(node){
-                    do {
-                        var start = pos;
+				var tagBody = function(node){
+					do {
+						var start = pos;
 
-                        var regexTagBody = this.regexTagBody;
-                        regexTagBody.lastIndex = pos;
-                        var text = regexTagBody.exec(inp);
-                        if (text && text[1]) {
-                            var txt = processValue(text[1]);
-//              var txt = text[1].replace(this.regexRemoveEscape, '$1'); // remove a single backslash from the content (it was used as an escape character)
-                            node.children.push(txt);
-                            pos = regexTagBody.lastIndex;
-                        }
-                        if (inp[pos] == '<') {
-                            var regexTagOpenOrClose = this.regexTagOpenOrClose;
-                            regexTagOpenOrClose.lastIndex = pos;
-                            var x = regexTagOpenOrClose.exec(inp);
-                            if (x && x.index == pos) {
-                                return node; // end of body
-                            }
-                            node.children.push(tag({}));
-                        }
-                    } while (start != pos);
-                }.bind(this);
+						var regexTagBody = this.regexTagBody;
+						regexTagBody.lastIndex = pos;
+						var text = regexTagBody.exec(inp);
+						if (text && text[1]) {
+							var txt = processValue(text[1]);
+//			  var txt = text[1].replace(this.regexRemoveEscape, '$1'); // remove a single backslash from the content (it was used as an escape character)
+							node.children.push(txt);
+							pos = regexTagBody.lastIndex;
+						}
+						if (inp[pos] == '<') {
+							var regexTagOpenOrClose = this.regexTagOpenOrClose;
+							regexTagOpenOrClose.lastIndex = pos;
+							var x = regexTagOpenOrClose.exec(inp);
+							if (x && x.index == pos) {
+								return node; // end of body
+							}
+							node.children.push(tag({}));
+						}
+					} while (start != pos);
+				}.bind(this);
 
-                var tagClose = function(node){
-                    var regexTagClose = this.regexTagClose;
-                    regexTagClose.lastIndex = pos;
-                    var ctag = regexTagClose.exec(inp);
-                    if (ctag) {
-                        pos = regexTagClose.lastIndex;
-                        if (node.name == ctag[1]) return true;
-                        return false; // was not expecting to close this tag
-                    }
+				var tagClose = function(node){
+					var regexTagClose = this.regexTagClose;
+					regexTagClose.lastIndex = pos;
+					var ctag = regexTagClose.exec(inp);
+					if (ctag) {
+						pos = regexTagClose.lastIndex;
+						if (node.name == ctag[1]) return true;
+						return false; // was not expecting to close this tag
+					}
 
-                    // tagClose should only be called if the next chars are starting a closing tag...
-                    return false;
-                }.bind(this);
+					// tagClose should only be called if the next chars are starting a closing tag...
+					return false;
+				}.bind(this);
 
-                var tag = function(node){
-                    if (!tagOpen(node)) {
-                        return node;
-                    }
-                    if (!node.unary) {
-                        tagBody(node);
-                        tagClose(node);
-                    }
-                    return node;
-                }.bind(this);
+				var tag = function(node){
+					if (!tagOpen(node)) {
+						return node;
+					}
+					if (!node.unary) {
+						tagBody(node);
+						tagClose(node);
+					}
+					return node;
+				}.bind(this);
 
-                var root = tag({});
+				var root = tag({});
 
-                returnValue = {start:start,stop:pos,name:15/*TAG*/,isPrimitive:true,root:root};
-            } else {
+				returnValue = {start:start,stop:pos,name:15/*TAG*/,isPrimitive:true,root:root};
+			} else {
 				// note: operators need to be ordered from longest to smallest. regex will take care of the rest.
 				// no need to worry about div vs regex. if looking for regex, earlier if will have eaten it
 				//var result = this.regexPunctuators.exec(inp.substring(pos,pos+4));
@@ -686,7 +686,7 @@ Tokenizer.prototype = {
 		if (matchedNewline) returnValue.newline = true;
 		return returnValue;
 	},
-    // used by ASI and error stuff (in parser)
+	// used by ASI and error stuff (in parser)
 	addTokenToStreamBefore: function(token, match){
 		var wtree = this.wtree;
 		var btree = this.btree;
@@ -709,89 +709,89 @@ Tokenizer.prototype = {
 			}
 		}
 	},
-    // (unused) replaces the range of tokens in the
-    // white and black streams with the specified token.
-    replaceTokensInStreamWithToken: function(token, wfrom, wto, bfrom, bto){
-        this.wtree.splice(wfrom, wto-wfrom, token);
-        this.btree.splice(bfrom, bto-bfrom, token);
-    },
-    parseCurlyMethodLiteral: function(match){
-        var error = false;
-        var pos = this.pos;
-        // match should be an opening curly with no preceeding newline
-        if (match.hasNewline) {
-            // so this is bad because if we would not demand this, the language could
-            // be amibiguous with a block
-            error = 'CurlyMethodsMayNotFollowNewline';
-        } else {
-            var input = this.inp;
+	// (unused) replaces the range of tokens in the
+	// white and black streams with the specified token.
+	replaceTokensInStreamWithToken: function(token, wfrom, wto, bfrom, bto){
+		this.wtree.splice(wfrom, wto-wfrom, token);
+		this.btree.splice(bfrom, bto-bfrom, token);
+	},
+	parseCurlyMethodLiteral: function(match){
+		var error = false;
+		var pos = this.pos;
+		// match should be an opening curly with no preceeding newline
+		if (match.hasNewline) {
+			// so this is bad because if we would not demand this, the language could
+			// be amibiguous with a block
+			error = 'CurlyMethodsMayNotFollowNewline';
+		} else {
+			var input = this.inp;
 
-            // remember number of curlies, you'll want that many closers as well
-            var curlies = 1;
-            while (input[pos] == '{') {
-                ++pos;
-                ++curlies;
-            }
+			// remember number of curlies, you'll want that many closers as well
+			var curlies = 1;
+			while (input[pos] == '{') {
+				++pos;
+				++curlies;
+			}
 
-            // keep parsing characters until you reach a curly.
-            // backslashes may only escape backslashes or curlies
-            while (!error && pos < input.length && input[pos] != '}') {
-                if (input[pos] == '{') {
-                    error = CurlyMethodsCannotContainOpeningCurly;
-                } else if (input[pos] == '\\') {
-                    if (input[pos+1] != '{' && input[pos+1] != '}' && input[pos+1] != '\\') {
-                        error = 'CurlyMethodsMayOnlyEscapeCurlies';
-                    } else {
-                        // skip curly or backslash
-                        ++pos;
-                    }
-                }
-                ++pos;
-            }
+			// keep parsing characters until you reach a curly.
+			// backslashes may only escape backslashes or curlies
+			while (!error && pos < input.length && input[pos] != '}') {
+				if (input[pos] == '{') {
+					error = CurlyMethodsCannotContainOpeningCurly;
+				} else if (input[pos] == '\\') {
+					if (input[pos+1] != '{' && input[pos+1] != '}' && input[pos+1] != '\\') {
+						error = 'CurlyMethodsMayOnlyEscapeCurlies';
+					} else {
+						// skip curly or backslash
+						++pos;
+					}
+				}
+				++pos;
+			}
 
-            if (!error) {
-                if (pos >= input.length) {
-                    error = 'CurlyMethodsUnexpectedEof';
-                } else {
-                    var n = curlies;
-                    while (n && pos<input.length) {
-                        if (input[pos] == '}') {
-                            ++pos;
-                            --n;
-                        } else {
-                            break;
-                        }
-                    }
-//                    while (n-- && pos<=input.length && input[pos++] == '}') console.log('yes');
+			if (!error) {
+				if (pos >= input.length) {
+					error = 'CurlyMethodsUnexpectedEof';
+				} else {
+					var n = curlies;
+					while (n && pos<input.length) {
+						if (input[pos] == '}') {
+							++pos;
+							--n;
+						} else {
+							break;
+						}
+					}
+//					while (n-- && pos<=input.length && input[pos++] == '}') console.log('yes');
 
-                    if (pos>input.length) error = 'CurlyMethodsUnexpectedEof';
-                    else if (n) error = 'CurlyMethodsWasOpenedWithMoreCurliesThanClosed';
-                }
-            }
-            if (!error) {
-                // transform this match to a CURLY_METHOD instead of the opening curly it was
-                match.name = this.CURLY_METHOD;
-                match.stop = pos;
-                match.value = this.inp.slice(match.start,pos);
-                match.curlies = curlies;
+					if (pos>input.length) error = 'CurlyMethodsUnexpectedEof';
+					else if (n) error = 'CurlyMethodsWasOpenedWithMoreCurliesThanClosed';
+				}
+			}
+			if (!error) {
+				// transform this match to a CURLY_METHOD instead of the opening curly it was
+				match.name = this.CURLY_METHOD;
+				match.stop = pos;
+				match.value = this.inp.slice(match.start,pos);
+				match.curlies = curlies;
 
-                this.pos = pos;
-            }
-        }
+				this.pos = pos;
+			}
+		}
 
-        if (error) {
-            this.addTokenToStreamBefore(
-                {
-                    start: match.start,
-                    stop:  pos,
-                    name:  this.ERROR,
-                    tokenError:true,
-                    error: Tokenizer.Error.NumberExponentRequiresDigits
-                },
-                match
-            );
-        }
-    },
+		if (error) {
+			this.addTokenToStreamBefore(
+				{
+					start: match.start,
+					stop:  pos,
+					name:  this.ERROR,
+					tokenError:true,
+					error: Tokenizer.Error.NumberExponentRequiresDigits
+				},
+				match
+			);
+		}
+	},
 	oldNumberParser: function(pos, chr, inp, returnValue, start, Tokenizer){
 		++pos;
 		// either: 0x 0X 0 .3
@@ -910,25 +910,25 @@ Tokenizer.Unidocde = window.Unicode;
 Tokenizer.regexNumber = /^(?:(0[xX][0-9A-Fa-f]+)|((?:(?:(?:(?:[0-9]+)(?:\.[0-9]*)?))|(?:\.[0-9]+))(?:[eE][-+]?[0-9]{1,})?))/;
 Tokenizer.regexNormalizeNewlines = /(\u000D[^\u000A])|[\u2028\u2029]/;
 // tag parsing regex
-                         // ws   name (must start with non-number-or-dash)
+						 // ws   name (must start with non-number-or-dash)
 Tokenizer.regexTagName = /[^\S]*([a-zA-Z][a-zA-Z0-9-]*)/g;
-                                // ws   attrname             "..[\"].."                           '..[\']..'
+								// ws   attrname			 "..[\"].."						   '..[\']..'
 Tokenizer.regexTagAttributes = /[^\S]+([a-zA-Z0-9-]+)(?:=(?:(?:"((?:(?:\\.)|(?:[^"]))*?)")|(?:'((?:(?:\\')|(?:[^']))*?)')))?/g;
-                                // ws  />
+								// ws  />
 Tokenizer.regexTagUnarySuffix = /[^\S]*\/[^\S]*>/g;
-                                // ws >
+								// ws >
 Tokenizer.regexTagBinarySuffix = /[^\S]*?>/g;
-                                // anything as long as its not a <, unless preceeded by \
+								// anything as long as its not a <, unless preceeded by \
 Tokenizer.regexTagBody = /((?:(?:\\.)|(?:[^<]))*)/g;
-                                // < ws /> / (?? TOFIX not sure whether this is correct or intentional...)
+								// < ws /> / (?? TOFIX not sure whether this is correct or intentional...)
 Tokenizer.regexTagOpenOrClose = /<[^\S]*[\/>]*\//g;
-                                // < ws / ws name ws >
+								// < ws / ws name ws >
 Tokenizer.regexTagClose = /<[^\S]*\/[^\S]*([a-zA-Z][a-zA-Z0-9-]*)[^\S]*>/g;
-                              // backslash with either a non-backslash following or the EOL following
+							  // backslash with either a non-backslash following or the EOL following
 Tokenizer.regexRemoveEscape = /\\(?:([^\\])|$)/g;
 
 
-//                      1 ws                            2 lt                        3 scmt 4 mcmt 5/6 str 7 nr       8 rx         9 dom        10 punc
+//					  1 ws							2 lt						3 scmt 4 mcmt 5/6 str 7 nr	   8 rx		 9 dom		10 punc
 Tokenizer.regexBig = /^([ \t\u000B\u000C\u00A0\uFFFF])?([\u000A\u000D\u2028\u2029])?(\/\/)?(\/\*)?(')?(")?(\.?[0-9])?(?:(\/)[^=])?(?:(<)[^<=])?(>>>=|===|!==|>>>|<<=|>>=|<=|>=|==|!=|\+\+|--|<<|>>|\&\&|\|\||\+=|-=|\*=|%=|\&=|\|=|\^=|\/=|\{|\}|\(|\)|\[|\]|\.|;|,|<|>|\+|-|\*|%|\||\&|\||\^|!|~|\?|:|=|\/)?/;
 Tokenizer.regexBigAlt = /([ \t\u000B\u000C\u00A0\uFFFF])?([\u000A\u000D\u2028\u2029])?(\/\/)?(\/\*)?(')?(")?(\.?[0-9])?(?:(\/)[^=])?(>>>=|===|!==|>>>|<<=|>>=|<=|>=|==|!=|\+\+|--|<<|>>|\&\&|\|\||\+=|-=|\*=|%=|\&=|\|=|\^=|\/=|\{|\}|\(|\)|\[|\]|\.|;|,|<|>|\+|-|\*|%|\||\&|\||\^|!|~|\?|:|=|\/)?/g;
 
@@ -956,9 +956,9 @@ Tokenizer.Error = {
 	QuantifierRequiresNumber: {msg:'Quantifier curly requires at least one digit before the comma'},
 	QuantifierRequiresClosingCurly: {msg:'Quantifier curly requires to be closed'},
 	MissingOpeningCurly: {msg:'Encountered closing quantifier curly without seeing an opening curly'},
-    CurlyMethodsMayNotFollowNewline: {msg:'There may not be any newlines between the expression and the curly method'},
-    CurlyMethodsMayOnlyEscapeCurlies: {msg:'You may only escape curlies {} and backslashes in curly methods'},
-    CurlyMethodsCannotContainOpeningCurly: {msg:'There\'s no way an opening curly could be part of a curly method, yet'},
-    CurlyMethodsWasOpenedWithMoreCurliesThanClosed: {msg:'The curly method must be closed with as many curlies as it was started with'},
-    CurlyMethodsUnexpectedEof: {msg:'Encountered EOF while parsing a curly method'},
+	CurlyMethodsMayNotFollowNewline: {msg:'There may not be any newlines between the expression and the curly method'},
+	CurlyMethodsMayOnlyEscapeCurlies: {msg:'You may only escape curlies {} and backslashes in curly methods'},
+	CurlyMethodsCannotContainOpeningCurly: {msg:'There\'s no way an opening curly could be part of a curly method, yet'},
+	CurlyMethodsWasOpenedWithMoreCurliesThanClosed: {msg:'The curly method must be closed with as many curlies as it was started with'},
+	CurlyMethodsUnexpectedEof: {msg:'Encountered EOF while parsing a curly method'},
 };

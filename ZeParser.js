@@ -93,7 +93,7 @@ ZeParser.prototype = {
 
 	ast: null,
 
-    queryMethodExtension: false,
+	queryMethodExtension: false,
 
 	parse: function(match){
 		if (match) match = this.tokenizer.storeCurrentAndFetchNextToken(false, match, this.stack); // meh
@@ -550,7 +550,7 @@ ZeParser.prototype = {
 						stack = oldstack;
 						this.scope = oldscope;
 					} //#endif
-                // this is the core (sub-)expression part:
+				// this is the core (sub-)expression part:
 				} else if (match.name <= 6 || match.name == 15/*TAG*/) { // IDENTIFIER STRING_SINGLE STRING_DOUBLE NUMERIC_HEX NUMERIC_DEC REG_EX or (custom extension) TAG
 					// save it in case it turns out to be a label.
 					var possibleLabel = match;
@@ -581,8 +581,8 @@ ZeParser.prototype = {
 						// only accept assignments after a member expression (identifier or ending with a [] suffix)
 						acceptAssignment = true;
 					} else if (isBreakOrContinueArg) {
-                        match = this.failsafe('BreakOrContinueArgMustBeJustIdentifier', match);
-                    }
+						match = this.failsafe('BreakOrContinueArgMustBeJustIdentifier', match);
+					}
 
 					// the current match is the lead value being queried. tag it that way
 					if (this.ast) { //#ifdef FULL_AST
@@ -725,17 +725,17 @@ ZeParser.prototype = {
 						match = this.tokenizer.storeCurrentAndFetchNextToken(true, match, stack); // might be div
 						acceptAssignment = false;
 					} else if (match.value == '{') {
-                        if (!this.queryMethodExtension) {
-                            console.warn("This should never happen. The `foo{.bar}` syntax is only parsed under a flag that's set to false... wtf?");
-                        }
+						if (!this.queryMethodExtension) {
+							console.warn("This should never happen. The `foo{.bar}` syntax is only parsed under a flag that's set to false... wtf?");
+						}
 
-                        // this transforms the given match inline. so the match stays the same, it just
-                        // has a new name and covers more input after this method finishes ;)
-                        this.tokenizer.parseCurlyMethodLiteral(match);
-                        match = this.tokenizer.storeCurrentAndFetchNextToken(true, match, stack); // might be div
-                    } else {
-                        throw "Coding error, should never happen";
-                    }
+						// this transforms the given match inline. so the match stays the same, it just
+						// has a new name and covers more input after this method finishes ;)
+						this.tokenizer.parseCurlyMethodLiteral(match);
+						match = this.tokenizer.storeCurrentAndFetchNextToken(true, match, stack); // might be div
+					} else {
+						throw "Coding error, should never happen";
+					}
 				}
 
 				// check for postfix operators ++ and --
@@ -826,8 +826,8 @@ ZeParser.prototype = {
 					}
 				} while (ternary); // if we just parsed a ternary expression, we need to check _again_ whether the next token is a binary operator.
 
-                // start over. match is the rhs for the lhs we just parsed, but lhs for the next expression
-                if (parseAnotherExpression && !(/*is left hand side start?*/ match.name <= 6 || match.name == 15/*TAG*/ || this.regexLhsStart.test(match.value))) {
+				// start over. match is the rhs for the lhs we just parsed, but lhs for the next expression
+				if (parseAnotherExpression && !(/*is left hand side start?*/ match.name <= 6 || match.name == 15/*TAG*/ || this.regexLhsStart.test(match.value))) {
 					// no idea what to do now. lets just ignore and see where it ends. TOFIX: maybe just break the loop or return?
 					this.failignore('InvalidRhsExpression', match, stack);
 				}
