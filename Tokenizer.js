@@ -487,11 +487,9 @@ Tokenizer.prototype = {
 					arrtxtjs.push(val.slice(last, i));
 
 					if (arrtxtjs.length > 1) { // if we did find any dynamic js block...
-						console.log(["has",arrtxtjs.length,"items",arrtxtjs])
 						for (var i=1; i<arrtxtjs.length; i+=2) {
 							arrtxtjs[i] = arrtxtjs[i].replace(this.regexRemoveEscape, '$1'); // remove a single backslash from the content (it was used as an escape character)
 						}
-						console.log([arrtxtjs])
 						return arrtxtjs; // return array with [string,js,string,js,...]
 					} else { // no dynamic js found, return a string
 						val = arrtxtjs[0].replace(this.regexRemoveEscape, '$1'); // remove a single backslash from the content (it was used as an escape character)
