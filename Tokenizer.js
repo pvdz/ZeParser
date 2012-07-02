@@ -44,14 +44,14 @@ function Tokenizer(inp, options){
 	this.regexBig = Tokenizer.regexBig;
 	this.regexBigAlt = Tokenizer.regexBigAlt;
 
-  // stuff for parsing tag literals
-  this.regexTagName = Tokenizer.regexTagName;
-  this.regexTagAttributes = Tokenizer.regexTagAttributes;
-  this.regexTagUnarySuffix = Tokenizer.regexTagUnarySuffix;
-  this.regexTagBinarySuffix = Tokenizer.regexTagBinarySuffix;
-  this.regexTagBody = Tokenizer.regexTagBody;
-  this.regexTagOpenOrClose = Tokenizer.regexTagOpenOrClose;
-  this.regexTagClose = Tokenizer.regexTagClose;
+    // stuff for parsing tag literals
+    this.regexTagName = Tokenizer.regexTagName;
+    this.regexTagAttributes = Tokenizer.regexTagAttributes;
+    this.regexTagUnarySuffix = Tokenizer.regexTagUnarySuffix;
+    this.regexTagBinarySuffix = Tokenizer.regexTagBinarySuffix;
+    this.regexTagBody = Tokenizer.regexTagBody;
+    this.regexTagOpenOrClose = Tokenizer.regexTagOpenOrClose;
+    this.regexTagClose = Tokenizer.regexTagClose;
 	this.regexRemoveEscape = Tokenizer.regexRemoveEscape;
 
 	this.tokenCount = 0;
@@ -426,7 +426,7 @@ Tokenizer.prototype = {
 					}
 				}
 				returnValue.twinfo = twinfo;
-			} else if (regex && part[9]) { // this.tagLiterals
+			} else if (regex && part[9] && this.tagLiterals) {
 				// allows you to use this literally (in places where an expression is allowed) in js:
 
 				// simple tag:
