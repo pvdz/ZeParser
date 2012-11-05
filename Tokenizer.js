@@ -450,6 +450,8 @@ Tokenizer.prototype = {
 				// can somehow prefix them with a backslash (strings, regex)
 				// if you must have these otherwise the fallback is eval
 
+				var invalidTag = false;
+
 				var processValue = function(val){
 					// post process dynamic parts of this value
 					// anything wrapped in (unescaped) { and } is considered to be
@@ -535,14 +537,19 @@ Tokenizer.prototype = {
 						var regexTagBinarySuffix = this.regexTagBinarySuffix;
 						regexTagBinarySuffix.lastIndex = lastIndex;
 						var x = regexTagBinarySuffix.exec(inp);
+
 						if (x && x.index == pos) {
 							node.children = [];
 							// now parse strings and other tags until you find a closing tag on the same level...
 							pos = regexTagBinarySuffix.lastIndex;
 							return true;
 						}
-						// i dont know what that was
-						throw console.warn("Error parsing tag");
+						// unclosed start tag, like a statement: `<foo`
+						invalidTag = true;
+						return false;
+					} else {
+						// could not parse an open tag
+						invalidTag = true;
 						return false;
 					}
 				}.bind(this);
@@ -560,6 +567,7 @@ Tokenizer.prototype = {
 							node.children.push(txt);
 							pos = regexTagBody.lastIndex;
 						}
+
 						if (inp[pos] == '<') {
 							var regexTagOpenOrClose = this.regexTagOpenOrClose;
 							regexTagOpenOrClose.lastIndex = pos;
@@ -567,7 +575,9 @@ Tokenizer.prototype = {
 							if (x && x.index == pos) {
 								return node; // end of body
 							}
-							node.children.push(tag({}));
+							var resultTag = tag({});
+							node.children.push(resultTag);
+							if (resultTag.hadError) return false;
 						}
 					} while (start != pos);
 				}.bind(this);
@@ -588,18 +598,29 @@ Tokenizer.prototype = {
 
 				var tag = function(node){
 					if (!tagOpen(node)) {
+						invalidTag = true;
+						node.hadError = true;
 						return node;
 					}
 					if (!node.unary) {
-						tagBody(node);
-						tagClose(node);
+						if (!tagBody(node)) {
+							invalidTag = true;
+							node.hadError = true;
+							return node;
+						}
+						if (!tagClose(node)) {
+							invalidTag = true;
+							node.hadError = true;
+							return node;
+						}
 					}
 					return node;
 				}.bind(this);
 
 				var root = tag({});
+				returnValue = {start:start,stop:pos,name:15/*TAG*/,isPrimitive:true,root:root,invalidTag:invalidTag};
 
-				returnValue = {start:start,stop:pos,name:15/*TAG*/,isPrimitive:true,root:root};
+				if (invalidTag) this.errorStack.push(returnValue);
 			} else {
 				// note: operators need to be ordered from longest to smallest. regex will take care of the rest.
 				// no need to worry about div vs regex. if looking for regex, earlier if will have eaten it
