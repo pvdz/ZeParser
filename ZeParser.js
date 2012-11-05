@@ -1993,6 +1993,7 @@ ZeParser.prototype = {
 			match.isString ||
 			match.isNumber ||
 			match.name == 1/*REG_EX*/ ||
+			match.name == 15/*TAG*/ ||
 			this.regexLhsStart.test(match.value)
 		) {
 			match = this.eatExpressions(false, match,stack);
